@@ -27,8 +27,6 @@ species<-"Human"
 ```{r}
 the.seed<-42
 set.seed(the.seed)
-setwd("C:/Users/4242338/Documents/main")
-
 ```
 
 ```{r}
