@@ -1,0 +1,122 @@
+---
+title: "Glioblastoma_scRNAseq_Clustering"
+format: html
+editor: visual
+---
+
+```{r}
+the.seed <-42
+set.seed(the.seed)
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(ggplot2)
+  library(SingleCellExperiment)
+  library(scDblFinder)
+  library(gprofiler2)  
+  library(scales)
+})
+```
+
+```{r}
+sample.name <- "brain_DV200"
+species <- "mouse"
+```
+
+we reload the saved rds data.
+
+```{r}
+load(paste0('../data/processed_data/',sample.name,'_FILTERED.rda'))
+```
+
+ok now that we finished the QC step, we move to the cell populations identification
+
+We set the default assay to RNA
+
+```{r}
+DefaultAssay(sobjFiltrd)<-'RNA'
+```
+
+Now, we will perform further analysis on a selected set of genes that are high variables genes in our dataset
+
+So we need to create a list of HVG (high variable genes)
+
+```{r}
+sobjFiltrd <- FindVariableFeatures(sobjFiltrd, selection.method="vst", n_features=2000, verbose = FALSE) 
+
+## top 10 high variable features
+head(VariableFeatures(sobjFiltrd),10) 
+
+## full list of hvg
+list_hvg<-VariableFeatures(sobjFiltrd)
+```
+
+Dimension Reduction PCA
+
+before performing pca, we need to scale data
+
+```{r}
+sobjFiltrd <- ScaleData(sobjFiltrd)
+```
+
+Now we run the PCA
+
+```{r}
+sobjFiltrd <- RunPCA(sobjFiltrd, features = VariableFeatures(object = sobjFiltrd))
+```
+
+Now lets visualise PCA results
+
+```{r}
+# Examine and visualize PCA results :
+print(sobjFiltrd[["pca"]], dims = 1:6, nfeatures = 5)
+VizDimLoadings(sobjFiltrd, dims = 3, reduction = "pca") 
+# Plot expression of gene driving principal component
+DimHeatmap(sobjFiltrd, dims = 1:6)
+```
+
+Ok lets choose parameters of PCA, most importantly the number of PC, for that we can perform the elbow plot that will helps us decide the nPC
+
+```{r}
+DimPlot(sobjFiltrd, reduction ="pca") 
+ElbowPlot(sobjFiltrd, ndims=50)
+```
+
+i think 5 PC is enough to explain most variability
+
+```{r}
+nPC = 5
+```
+
+Now lets cluster cells with SNN and Louvain
+
+```{r}
+# snn graph
+sobjFiltrd <- FindNeighbors(sobjFiltrd, dims=1:nPC) 
+# we build clusters with different resolutions to check whats the best
+sobjFiltrd <- FindClusters(sobjFiltrd, resolution=c(0.1, 0.2, 0.5, 1, 2))
+# clusters are stored in meta.data
+```
+
+Now lets check whats in each cluster
+
+```{r}
+# check the number of cells per cluster
+table(sobjFiltrd[['RNA_snn_res.0.1' ]]) 
+table(sobjFiltrd[['RNA_snn_res.0.2' ]]) 
+table(sobjFiltrd[['RNA_snn_res.0.5' ]])
+```
+
+Lets run a UMAP to better visualise
+
+```{r}
+sobjFiltrd <- RunUMAP(sobjFiltrd, dims=1:nPC)
+```
+
+Ok umap done, lets visualise the cluster with resolution = 0.2
+
+```{r}
+# specify the clustering you want to see
+Idents(sobjFiltrd) <- 'RNA_snn_res.0.1'  
+DimPlot(sobjFiltrd, reduction = "umap")
+```

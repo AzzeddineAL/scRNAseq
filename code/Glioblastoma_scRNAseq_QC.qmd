@@ -1,0 +1,235 @@
+---
+title: "Glioblastoma FFPE Tissues Dissociated Manually or using gentleMACS Dissociator, Multiplexed Samples, 4 Probe Barcodes (Next GEM)"
+format: html
+editor: visual
+knitr:root.dir
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(ggplot2)
+  library(SingleCellExperiment)
+  library(scDblFinder)
+  library(gprofiler2)  
+  library(scales)
+})
+```
+
+We set the sample name and the seed to avoid random values
+
+```{r}
+sample.name<-"Brain_DV200"
+species<-"Human"
+```
+
+```{r}
+the.seed<-42
+set.seed(the.seed)
+setwd("C:/Users/4242338/Documents/main")
+
+```
+
+```{r}
+scmat<-Read10X("../data/raw_data/sample_raw_feature_bc_matrix")
+```
+
+```{r}
+class(scmat)
+head(scmat)
+```
+
+```{r}
+nb_umi_by_barcode<- data.frame(
+  nb_umi=Matrix::colSums(scmat),
+  barcodes = colnames(scmat))
+
+
+nb_umi_by_barcode<- nb_umi_by_barcode %>% arrange(desc(nb_umi)) %>% dplyr::mutate(num_barcode=seq.int(ncol(scmat)))
+
+#knee plot
+ggplot(nb_umi_by_barcode, aes(y = nb_umi, x = num_barcode)) +
+  geom_point() + ggtitle(paste0("Kneeplot of ", sample.name, " sample")) + 
+  theme(legend.title = element_blank()) +
+  scale_y_log10(name = "Number of UMI per droplet (log scale)") + 
+  scale_x_log10(name = "Droplet rank (log scale)") +
+  expand_limits(x = 0, y = 0) +
+  guides(colour = guide_legend(override.aes = list(linetype = c(0, 0), shape = c(16, 16))))
+```
+
+The knee-plot look perfect, we have a unique knee at approx 3000umi, next step is to create a seurat object
+
+```{r}
+sobj <- CreateSeuratObject(
+  counts = scmat,
+  min.cells = 5,
+  min.features = 200,
+  project = sample.name)
+
+```
+
+```{r}
+#class of our Seurat Object
+class(sobj)
+#barcodes names
+head(sobj)
+# number of barcodes
+ncol(sobj)
+# number of features 
+nrow(sobj)
+# the object
+sobj
+
+```
+
+Now that we have our Seurat object, 10306 barcodes and 18988 features (genes), lets free some memory
+
+```{r}
+rm(nb_umi_by_barcode, scmat)
+gc()
+```
+
+```{r}
+sobj@meta.data[1:10,]
+sobj@assays$RNA@layers$counts[1:10,1:4]
+```
+
+Now lets filter our object, remove undersequenced cells, debris, duplicates or multiplets.
+
+```{r}
+summary(sobj$nFeature_RNA)
+
+#histogram
+hist(sobj$nFeature_RNA,
+     breaks = 200,
+     xlab = "number of genes",
+     main = "number of genes per cell"
+)
+# violin plot
+VlnPlot(sobj, features= c("nFeature_RNA"), alpha = 0.1) + geom_hline(yintercept = c(800,5000))
+
+```
+
+The violin plot is good to visualise the number of genes per cell, we can see a high density of cells in the bottom plot which correspond to debris, dead cells or empty droplets, and above 5000 we see cells that containes 10K + genes which correspond highly to duplets and multiplets, i think the 800,5000 threshold is good for this dataset.
+
+```{r}
+summary(sobj$nCount_RNA)
+#Violin plot (to see number of UMI (RNAs) per cell )
+VlnPlot(sobj, features = c ("nCount_RNA"), alpha = 0.1) + geom_hline(yintercept = c(1500,30000))
+#hard to visualise so lets log scale
+VlnPlot(sobj, features = c ("nCount_RNA"),log=TRUE, alpha = 0.1) + geom_hline(yintercept = c(1000,30000))
+
+```
+
+```{r}
+FeatureScatter(sobj, feature1="nCount_RNA", feature2 = "nFeature_RNA", pt.size = 0.1)
+```
+
+Pearson correlation is 0.76 which is good, the 500-30k threshold looks fine to me, we eliminate duplets and multiplets and empty droplets.
+
+```{r}
+# lets define the thresholds based on Vlnplots
+minGenes = 800
+minUmi = 100
+```
+
+```{r}
+sobjFiltrd = subset(sobj, subset = nFeature_RNA > minGenes & nCount_RNA > minUmi)
+```
+
+ok now i've filtered the object on the thresholds defined, lets visualise before we clean the environment
+
+```{r}
+VlnPlot(sobjFiltrd, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2,pt.size = 0.01)
+
+FeatureScatter(sobjFiltrd, feature1 = "nCount_RNA", feature2 = "nFeature_RNA",pt.size =0.1)
+```
+
+ok good, now lets process mitochondrial genes.
+
+```{r}
+mito_pattern <- "^MT-"
+sobjFiltrd$percent_mt<- PercentageFeatureSet(sobjFiltrd, pattern = mito_pattern)
+summary(sobjFiltrd$percent_mt)
+```
+
+```{r}
+#Violin plot mito genes
+VlnPlot(sobjFiltrd, features = c("percent_mt"))
+#histogram
+qplot(sobjFiltrd$percent_mt, geom = "histogram", bins = 100, main = "percent_mt", xlab = "percent_mt") 
+
+FeatureScatter(sobjFiltrd, feature1 = "nCount_RNA", feature2 = "percent_mt",pt.size =0.1)
+```
+
+from the plots, i think a threshold of 5 is optimal, pearson correlation is negative -0.14 which means cells with most mito genes \>15% have low number of umi (nCount approx = 0)
+
+```{r}
+maxpct_mt = 5
+sobjFiltrd <- subset(sobjFiltrd, subset =  percent_mt < maxpct_mt)
+VlnPlot(sobjFiltrd, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2)
+```
+
+```{r}
+ncol(sobjFiltrd) #Nbr of barcodes (cells)
+nrow(sobjFiltrd) #Nbr of genes
+```
+
+now we ended up with 5k cells and 19k genes
+
+we had 10306 cells and same number of genes
+
+```{r}
+rm(sobj)
+gc()
+```
+
+Now we will remove doublets and multiplets using scDblFinder package, for this we need to convert the seurat object into other format using function : asSingleCellExperiment
+
+```{r}
+# Transforming Seurat object 
+sceobj<-as.SingleCellExperiment(sobjFiltrd)
+
+#We remove doublets 
+doublet_res<-scDblFinder(sceobj)
+
+#We save the results in the Seurat object
+sobjFiltrd$doublets.class <-doublet_res$scDblFinder.class
+
+# % of doublets
+table(sobjFiltrd$doublets.class)
+```
+
+We have 6% of doublets which is not high, the dataset is clean.
+
+now lets remove the 6% of doublets and visualise again
+
+```{r}
+sobjFiltrd <- subset(sobjFiltrd, subset = doublets.class == "singlet")
+VlnPlot(sobjFiltrd, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2)
+```
+
+```{r}
+rm(doublet_res, sceobj)
+gc()
+```
+
+Now after filtering Mitochondrial genes and doublets/multiplets + low quality cells, we have to normalise the data, since some cells have high number of umi than others, some cells are more active than others due to their biology, but we also have sequencing bias that we need to correct by normalizing or via integration if needed
+
+```{r}
+sobjFiltrd <- NormalizeData(sobjFiltrd, normalization.method = "LogNormalize")
+```
+
+We can also perform SCTransform, but this method does require some computational ressources since it uses GLMs to adjust residus.
+
+now that we are done with QC step we go ahead and save
+
+```{r}
+# Save seurat object
+save(sobjFiltrd, file = paste0('../data/processed_data',sample.name,'_FILTERED.rda'))
+```
+
+```{r}
+sessionInfo()
+```
