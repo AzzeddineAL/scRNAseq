@@ -23,7 +23,7 @@ sample.name <- "brain_DV200"
 species <- "mouse"
 ```
 
-we reload the saved rds data.
+**we reload the saved rds data.**
 
 ```{r}
 load(paste0('../data/processed_data/',sample.name,'_FILTERED.rda'))
@@ -51,7 +51,7 @@ head(VariableFeatures(sobjFiltrd),10)
 list_hvg<-VariableFeatures(sobjFiltrd)
 ```
 
-Dimension Reduction PCA
+**Dimension Reduction PCA**
 
 before performing pca, we need to scale data
 
@@ -59,7 +59,7 @@ before performing pca, we need to scale data
 sobjFiltrd <- ScaleData(sobjFiltrd)
 ```
 
-Now we run the PCA
+**Now we run the PCA**
 
 ```{r}
 sobjFiltrd <- RunPCA(sobjFiltrd, features = VariableFeatures(object = sobjFiltrd))
@@ -88,7 +88,7 @@ i think 5 PC is enough to explain most variability
 nPC = 5
 ```
 
-Now lets cluster cells with SNN and Louvain
+Now lets cluster cells with **SNN and Louvain**
 
 ```{r}
 # snn graph
@@ -107,7 +107,7 @@ table(sobjFiltrd[['RNA_snn_res.0.2' ]])
 table(sobjFiltrd[['RNA_snn_res.0.5' ]])
 ```
 
-Lets run a UMAP to better visualise
+**Lets run a UMAP to better visualise**
 
 ```{r}
 sobjFiltrd <- RunUMAP(sobjFiltrd, dims=1:nPC)
@@ -120,3 +120,15 @@ Ok umap done, lets visualise the cluster with resolution = 0.2
 Idents(sobjFiltrd) <- 'RNA_snn_res.0.1'  
 DimPlot(sobjFiltrd, reduction = "umap")
 ```
+
+Check for bias in the umap clusters
+
+```{r}
+FeaturePlot(object = sobjFiltrd, reduction = 'umap', pt.size = .2, features = "percent_mt", cols = c("gold", "blue"), order = TRUE)
+
+FeaturePlot(object = sobjFiltrd, reduction = 'umap', pt.size = .2, features = "nCount_RNA", cols = c("gold", "blue"), order = TRUE)
+
+FeaturePlot(object = sobjFiltrd, reduction = 'umap', pt.size = .2, features = "nFeature_RNA", cols = c("gold", "blue"), order = TRUE)
+```
+
+**Clusters annotation**

@@ -2,7 +2,6 @@
 title: "Glioblastoma FFPE Tissues Dissociated Manually or using gentleMACS Dissociator, Multiplexed Samples, 4 Probe Barcodes (Next GEM)"
 format: html
 editor: visual
-knitr:root.dir
 ---
 
 ```{r}
@@ -12,7 +11,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(SingleCellExperiment)
   library(scDblFinder)
-  library(gprofiler2)  
+  library(gprofiler2)
   library(scales)
 })
 ```
@@ -48,15 +47,17 @@ nb_umi_by_barcode<- nb_umi_by_barcode %>% arrange(desc(nb_umi)) %>% dplyr::mutat
 
 #knee plot
 ggplot(nb_umi_by_barcode, aes(y = nb_umi, x = num_barcode)) +
-  geom_point() + ggtitle(paste0("Kneeplot of ", sample.name, " sample")) + 
+  geom_point() + ggtitle(paste0("Kneeplot of ", sample.name, " sample")) +
   theme(legend.title = element_blank()) +
-  scale_y_log10(name = "Number of UMI per droplet (log scale)") + 
+  scale_y_log10(name = "Number of UMI per droplet (log scale)") +
   scale_x_log10(name = "Droplet rank (log scale)") +
   expand_limits(x = 0, y = 0) +
   guides(colour = guide_legend(override.aes = list(linetype = c(0, 0), shape = c(16, 16))))
 ```
 
-The knee-plot look perfect, we have a unique knee at approx 3000umi, next step is to create a seurat object
+The knee-plot look perfect, we have a unique knee at approx 3000umi, next step is to create a seurat object.
+
+Note : this is the *raw* matrix (all barcodes, including empty droplets), so the gene/UMI filters below also act as the empty-droplet filter. Using `sample_filtered_feature_bc_matrix` (Cell Ranger cell calling) or `DropletUtils::emptyDrops` would be more rigorous.
 
 ```{r}
 sobj <- CreateSeuratObject(
@@ -74,14 +75,14 @@ class(sobj)
 head(sobj)
 # number of barcodes
 ncol(sobj)
-# number of features 
+# number of features
 nrow(sobj)
 # the object
 sobj
 
 ```
 
-Now that we have our Seurat object, 10306 barcodes and 18988 features (genes), lets free some memory
+Now that we have our Seurat object, `r ncol(sobj)` barcodes and `r nrow(sobj)` features (genes), lets free some memory
 
 ```{r}
 rm(nb_umi_by_barcode, scmat)
@@ -105,18 +106,20 @@ hist(sobj$nFeature_RNA,
      main = "number of genes per cell"
 )
 # violin plot
-VlnPlot(sobj, features= c("nFeature_RNA"), alpha = 0.1) + geom_hline(yintercept = c(800,5000))
+VlnPlot(sobj, features= c("nFeature_RNA"), alpha = 0.1) + geom_hline(yintercept = 800)
 
 ```
 
-The violin plot is good to visualise the number of genes per cell, we can see a high density of cells in the bottom plot which correspond to debris, dead cells or empty droplets, and above 5000 we see cells that containes 10K + genes which correspond highly to duplets and multiplets, i think the 800,5000 threshold is good for this dataset.
+The violin plot is good to visualise the number of genes per cell, we can see a high density of barcodes in the bottom of the plot (median \~600 genes) which correspond to debris, dead cells or empty droplets, so we keep cells with more than 800 genes.
+
+We do not apply an upper threshold on the number of genes : some real cells have a lot of genes (e.g. inhibitory neurons have a median of \~5000 genes and \~11k UMI in this dataset), a hard cut at 5000 genes would remove them. Doublets/multiplets are removed later with scDblFinder.
 
 ```{r}
 summary(sobj$nCount_RNA)
 #Violin plot (to see number of UMI (RNAs) per cell )
-VlnPlot(sobj, features = c ("nCount_RNA"), alpha = 0.1) + geom_hline(yintercept = c(1500,30000))
+VlnPlot(sobj, features = c ("nCount_RNA"), alpha = 0.1) + geom_hline(yintercept = 1000)
 #hard to visualise so lets log scale
-VlnPlot(sobj, features = c ("nCount_RNA"),log=TRUE, alpha = 0.1) + geom_hline(yintercept = c(1000,30000))
+VlnPlot(sobj, features = c ("nCount_RNA"),log=TRUE, alpha = 0.1) + geom_hline(yintercept = 1000)
 
 ```
 
@@ -124,12 +127,12 @@ VlnPlot(sobj, features = c ("nCount_RNA"),log=TRUE, alpha = 0.1) + geom_hline(yi
 FeatureScatter(sobj, feature1="nCount_RNA", feature2 = "nFeature_RNA", pt.size = 0.1)
 ```
 
-Pearson correlation is 0.76 which is good, the 500-30k threshold looks fine to me, we eliminate duplets and multiplets and empty droplets.
+Pearson correlation is 0.76 which is good, a minimum of 1000 UMI per cell removes the empty droplets and low quality cells.
 
 ```{r}
 # lets define the thresholds based on Vlnplots
 minGenes = 800
-minUmi = 100
+minUmi = 1000
 ```
 
 ```{r}
@@ -154,17 +157,18 @@ summary(sobjFiltrd$percent_mt)
 
 ```{r}
 #Violin plot mito genes
-VlnPlot(sobjFiltrd, features = c("percent_mt"))
+VlnPlot(sobjFiltrd, features = c("percent_mt")) + geom_hline(yintercept = 10)
 #histogram
-qplot(sobjFiltrd$percent_mt, geom = "histogram", bins = 100, main = "percent_mt", xlab = "percent_mt") 
+ggplot(data.frame(percent_mt = sobjFiltrd$percent_mt), aes(x = percent_mt)) +
+  geom_histogram(bins = 100) + geom_vline(xintercept = 10) + ggtitle("percent_mt")
 
 FeatureScatter(sobjFiltrd, feature1 = "nCount_RNA", feature2 = "percent_mt",pt.size =0.1)
 ```
 
-from the plots, i think a threshold of 5 is optimal, pearson correlation is negative -0.14 which means cells with most mito genes \>15% have low number of umi (nCount approx = 0)
+The pearson correlation is negative (-0.14) : cells with a high % of mitochondrial genes have a low number of UMI (damaged/dying cells). Most cells are below 5%, but for FFPE tissue (Flex probe-based chemistry) a threshold of 10% is more usual and keeps \~370 more cells, so we use 10%.
 
 ```{r}
-maxpct_mt = 5
+maxpct_mt = 10
 sobjFiltrd <- subset(sobjFiltrd, subset =  percent_mt < maxpct_mt)
 VlnPlot(sobjFiltrd, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2)
 ```
@@ -174,9 +178,9 @@ ncol(sobjFiltrd) #Nbr of barcodes (cells)
 nrow(sobjFiltrd) #Nbr of genes
 ```
 
-now we ended up with 5k cells and 19k genes
+now we ended up with `r ncol(sobjFiltrd)` cells and `r nrow(sobjFiltrd)` genes
 
-we had 10306 cells and same number of genes
+we had `r ncol(sobj)` barcodes and the same number of genes
 
 ```{r}
 rm(sobj)
@@ -186,10 +190,11 @@ gc()
 Now we will remove doublets and multiplets using scDblFinder package, for this we need to convert the seurat object into other format using function : asSingleCellExperiment
 
 ```{r}
-# Transforming Seurat object 
+# Transforming Seurat object
 sceobj<-as.SingleCellExperiment(sobjFiltrd)
 
-#We remove doublets 
+#We remove doublets
+set.seed(the.seed)
 doublet_res<-scDblFinder(sceobj)
 
 #We save the results in the Seurat object
@@ -197,11 +202,12 @@ sobjFiltrd$doublets.class <-doublet_res$scDblFinder.class
 
 # % of doublets
 table(sobjFiltrd$doublets.class)
+round(100 * prop.table(table(sobjFiltrd$doublets.class)), 1)
 ```
 
-We have 6% of doublets which is not high, the dataset is clean.
+We have `r round(100 * mean(sobjFiltrd$doublets.class == "doublet"), 1)`% of doublets which is not high, the dataset is clean.
 
-now lets remove the 6% of doublets and visualise again
+now lets remove the doublets and visualise again
 
 ```{r}
 sobjFiltrd <- subset(sobjFiltrd, subset = doublets.class == "singlet")
@@ -225,7 +231,7 @@ now that we are done with QC step we go ahead and save
 
 ```{r}
 # Save seurat object
-save(sobjFiltrd, file = paste0('../data/processed_data',sample.name,'_FILTERED.rda'))
+save(sobjFiltrd, file = paste0('../data/processed_data/',sample.name,'_FILTERED.rda'))
 ```
 
 ```{r}
