@@ -85,7 +85,7 @@ ElbowPlot(sobjFiltrd, ndims=50)
 i think 5 PC is enough to explain most variability
 
 ```{r}
-nPC = 5
+nPC = 20
 ```
 
 Now lets cluster cells with **SNN and Louvain**
@@ -121,6 +121,8 @@ Idents(sobjFiltrd) <- 'RNA_snn_res.0.1'
 DimPlot(sobjFiltrd, reduction = "umap")
 ```
 
+We can see 9 distinct clusters in our umap representation, 9 clusters corresponding to 9 cell populations, next step is to check for bias in umap cluster and then annotate clusters (who is who)
+
 Check for bias in the umap clusters
 
 ```{r}
@@ -132,3 +134,49 @@ FeaturePlot(object = sobjFiltrd, reduction = 'umap', pt.size = .2, features = "n
 ```
 
 **Clusters annotation**
+
+Now, for annotations, its better to use a packages that annotate cells automatically by overlapping hvg with databases of reference.
+
+Starting with SingleR most commonly used (or Azumith) then GBmap a specialized database in glioblastomas for tumour cells annotations.
+
+# SingleR setup
+
+```{r}
+BiocManager::install(c("SingleR", "celldex"))
+```
+
+```{r}
+library(SingleR)
+library(celldex)
+library(scrapper)
+
+ref <- celldex::HumanPrimaryCellAtlasData()
+
+pred <- SingleR(
+  test = GetAssayData(sobjFiltrd, layer = "data"),
+  ref = ref,
+  labels = ref$label.main,
+  clusters = sobjFiltrd$RNA_snn_res.0.2 # remove if we want to annotate all cells
+)
+
+# report annotation on each cell
+sobjFiltrd$singler<- pred$pruned.labels[
+  match(sobjFiltrd$RNA_snn_res.0.2, rownames(pred))
+]
+
+#Plot
+
+DimPlot(sobjFiltrd, group.by = "singler", label = TRUE, repel = TRUE)
+plotScoreHeatmap(pred)
+  
+```
+
+Annotation is incomplete, probably better to annotate each cell separately rather than annotating entire clusters.
+
+Lets move to **GBmap**, for that we need to download the ref database (core)
+
+link : Harmonized single-cell landscape, intercellular crosstalk and tumor architecture of glioblastoma - CZ CELLxGENE Discover
+
+**Alternative method : using API** (but you still need to download the map core file 8gb)
+
+## 
