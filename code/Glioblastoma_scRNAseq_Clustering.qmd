@@ -179,4 +179,24 @@ link : Harmonized single-cell landscape, intercellular crosstalk and tumor archi
 
 **Alternative method : using API** (but you still need to download the map core file 8gb)
 
-## 
+## GBmap setup
+
+CELLxGENE only provides a h5ad file, so we first build a light Seurat reference with `prep_gbmap_ref.R` (run it once from the code folder), then we transfer the GBmap annotations to our cells.
+
+```{r}
+gbmap <- readRDS("../data/gbmap_core/gbmap_core_ref.rds")
+
+anchors <- FindTransferAnchors(
+  reference = gbmap, query = sobjFiltrd,
+  normalization.method = "LogNormalize",
+  reference.reduction = "pca", dims = 1:30)
+
+sobjFiltrd <- TransferData(
+  anchorset = anchors, reference = gbmap,
+  refdata = list(level1 = "level1", level3 = "level3", level4 = "level4"),
+  query = sobjFiltrd, dims = 1:30)
+
+DimPlot(sobjFiltrd, group.by = "predicted.level3", label = TRUE, repel = TRUE)
+FeaturePlot(sobjFiltrd, "predicted.level3.score")
+table(sobjFiltrd$RNA_snn_res.0.2, sobjFiltrd$predicted.level3)
+```
