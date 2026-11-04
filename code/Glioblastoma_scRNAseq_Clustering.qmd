@@ -20,7 +20,7 @@ suppressPackageStartupMessages({
 
 ```{r}
 sample.name <- "brain_DV200"
-species <- "mouse"
+species <- "Human"
 ```
 
 **we reload the saved rds data.**
