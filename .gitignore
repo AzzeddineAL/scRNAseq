@@ -5,3 +5,6 @@
 .RDataTmp
 data/gbmap_core/
 code/Rplots.pdf
+# large or regenerated outputs
+data/processed_data/*.rda
+data/infercnv_out/

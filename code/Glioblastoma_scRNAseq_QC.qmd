@@ -28,6 +28,10 @@ the.seed<-42
 set.seed(the.seed)
 ```
 
+Dataset from 10x Genomincs : Manual dissection
+
+<https://cf.10xgenomics.com/samples/cell-exp/7.1.0/4plex_human_lungcancer_glioblastoma_scFFPE_multiplex_Glioblastoma_Manual_BC3/4plex_human_lungcancer_glioblastoma_scFFPE_multiplex_Glioblastoma_Manual_BC3_count_sample_raw_feature_bc_matrix.tar.gz>
+
 ```{r}
 scmat<-Read10X("../data/raw_data/sample_raw_feature_bc_matrix")
 ```

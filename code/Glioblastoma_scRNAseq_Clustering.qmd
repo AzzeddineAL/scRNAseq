@@ -42,7 +42,7 @@ Now, we will perform further analysis on a selected set of genes that are high v
 So we need to create a list of HVG (high variable genes)
 
 ```{r}
-sobjFiltrd <- FindVariableFeatures(sobjFiltrd, selection.method="vst", n_features=2000, verbose = FALSE) 
+sobjFiltrd <- FindVariableFeatures(sobjFiltrd, selection.method="vst", nfeatures=2000, verbose = FALSE) 
 
 ## top 10 high variable features
 head(VariableFeatures(sobjFiltrd),10) 
@@ -82,7 +82,7 @@ DimPlot(sobjFiltrd, reduction ="pca")
 ElbowPlot(sobjFiltrd, ndims=50)
 ```
 
-i think 5 PC is enough to explain most variability
+the elbow plot flattens slowly, so we keep 20 PC (15 to 30 is usual), with only 5 PC small populations like T cells and cycling cells are merged into other clusters
 
 ```{r}
 nPC = 20
@@ -117,11 +117,11 @@ Ok umap done, lets visualise the cluster with resolution = 0.2
 
 ```{r}
 # specify the clustering you want to see
-Idents(sobjFiltrd) <- 'RNA_snn_res.0.1'  
+Idents(sobjFiltrd) <- 'RNA_snn_res.0.2'
 DimPlot(sobjFiltrd, reduction = "umap")
 ```
 
-We can see 9 distinct clusters in our umap representation, 9 clusters corresponding to 9 cell populations, next step is to check for bias in umap cluster and then annotate clusters (who is who)
+We can see `r length(unique(sobjFiltrd$RNA_snn_res.0.2))` distinct clusters in our umap representation (resolution 0.2), next step is to check for bias in umap cluster and then annotate clusters (who is who)
 
 Check for bias in the umap clusters
 
@@ -142,6 +142,8 @@ Starting with SingleR most commonly used (or Azumith) then GBmap a specialized d
 # SingleR setup
 
 ```{r}
+#| eval: false
+# run once to install the packages
 BiocManager::install(c("SingleR", "celldex"))
 ```
 
@@ -200,3 +202,72 @@ DimPlot(sobjFiltrd, group.by = "predicted.level3", label = TRUE, repel = TRUE)
 FeaturePlot(sobjFiltrd, "predicted.level3.score")
 table(sobjFiltrd$RNA_snn_res.0.2, sobjFiltrd$predicted.level3)
 ```
+
+## Manual check of the mapping
+
+GBmap predictions are only a suggestion (e.g. the reference has very few neurons), so we check canonical markers per cluster. A correct mapping gives a diagonal of big dark dots.
+
+```{r}
+#| fig-width: 15
+#| fig-height: 5.5
+markers <- list(
+  "Exc. neuron" = c("SLC17A7", "TBR1", "NRGN"),
+  "Inh. neuron" = c("GAD1", "GAD2", "SST"),
+  "Oligo"       = c("MOG", "MOBP", "PLP1"),
+  "OPC"         = c("PDGFRA", "GPR17", "PCDH15"),
+  "Astro"       = c("AQP4", "WIF1", "SLC39A12"),
+  "Tumour MES"  = c("CHI3L1", "CD44", "TNC"),
+  "Tumour NPC"  = c("SOX4", "ONECUT2", "MYCN"),
+  "Cycling"     = c("MKI67", "TOP2A"),
+  "Myeloid"     = c("CD163", "CSF1R", "P2RY12"),
+  "T/NK"        = c("CD3E", "TRAC", "GZMA"),
+  "Endothelial" = c("CLDN5", "VWF"),
+  "Mural"       = c("RGS5", "PDGFRB"))
+
+# order clusters in the same order as the marker groups
+Idents(sobjFiltrd) <- factor(sobjFiltrd$RNA_snn_res.0.2,
+                             levels = c("0", "7", "4", "8", "9", "1", "3", "6", "2", "10", "5"))
+
+DotPlot(sobjFiltrd, features = markers, cluster.idents = FALSE) +
+  RotatedAxis() +
+  labs(x = NULL, y = "Cluster (res 0.2)") +
+  theme(strip.text.x = element_text(angle = 90, hjust = 0, size = 9))
+```
+
+## Final annotation
+
+Cluster 6 has low UMI counts and no clear marker, but some cells express cycling genes, so we keep it as "Unclear" and let inferCNV decide.
+
+```{r}
+Idents(sobjFiltrd) <- "RNA_snn_res.0.2"
+
+new_labels <- c(
+  "0" = "Excitatory neurons",
+  "1" = "Tumour MES-like",
+  "2" = "Myeloid",
+  "3" = "Tumour NPC-like",
+  "4" = "Oligodendrocytes",
+  "5" = "Vascular",
+  "6" = "Unclear",
+  "7" = "Inhibitory neurons",
+  "8" = "OPC",
+  "9" = "Astrocytes",
+  "10" = "T/NK cells")
+
+sobjFiltrd <- RenameIdents(sobjFiltrd, new_labels)
+sobjFiltrd$celltype <- Idents(sobjFiltrd)
+
+DimPlot(sobjFiltrd, group.by = "celltype", label = TRUE, repel = TRUE)
+
+save(sobjFiltrd, file = paste0("../data/processed_data/", sample.name, "_ANNOTATED.rda"))
+```
+
+# The question that we are asking :
+
+A glioblastoma contains two main populations that interact:
+
+-   **Tumor cells**, which do not form a homogeneous population but pass through multiple "states";
+
+-   **The tumor microenvironment (TME)**: the non-tumor cells present within the tumor. In glioblastoma, these are mainly macrophages and microglia (TAMs), which can represent a large portion of the cells. Blood vessels, a small number of T lymphocytes, and infiltrated brain tissue are also found there.
+
+**The general question is therefore: in this tumor, which tumor states are present, what microenvironment surrounds them, and what signals might connect them?**

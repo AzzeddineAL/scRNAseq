@@ -1,0 +1,204 @@
+---
+title: "Glioblastoma_scRNAseq_CNV"
+format: html
+editor: visual
+---
+
+```{r}
+the.seed <- 42
+set.seed(the.seed)
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(ggplot2)
+  library(infercnv)
+})
+```
+
+```{r}
+sample.name <- "brain_DV200"
+```
+
+**Why inferCNV ?**
+
+GBmap only tells us that some cells *look like* tumour cells. To confirm which cells are malignant, we look at DNA copy number alterations : when a part of a chromosome is gained or lost, all its genes are a bit more or less expressed. Glioblastoma cells almost always have a **gain of chromosome 7 and a loss of chromosome 10**, normal cells don't.
+
+inferCNV compares the expression along each chromosome to a group of cells that we know are normal (the reference).
+
+Installation (run once) : on Windows, install JAGS first (<https://sourceforge.net/projects/mcmc-jags/>), then :
+
+```{r}
+#| eval: false
+install.packages("rjags")
+BiocManager::install("infercnv")
+```
+
+we reload the annotated object
+
+```{r}
+load(paste0('../data/processed_data/', sample.name, '_ANNOTATED.rda'))
+table(sobjFiltrd$celltype)
+```
+
+**Reference cells** : cell types that can't be tumour cells in a glioblastoma (immune, vascular) and oligodendrocytes. All the other cells are tested, including neurons as a sanity check (they should come out normal).
+
+```{r}
+ref_groups <- c("Oligodendrocytes", "Myeloid", "T/NK cells", "Vascular")
+
+annotations <- data.frame(
+  row.names = colnames(sobjFiltrd),
+  celltype = as.character(sobjFiltrd$celltype))
+```
+
+Gene positions on the chromosomes (hg38, from the Trinity CTAT / inferCNV resources) : <https://data.broadinstitute.org/Trinity/CTAT/cnv/hg38_gencode_v27.txt>
+
+```{r}
+gene_order <- "../data/reference/hg38_gencode_v27.txt"
+
+infercnv_obj <- CreateInfercnvObject(
+  raw_counts_matrix = GetAssayData(sobjFiltrd, layer = "counts"),
+  annotations_file = annotations,
+  delim = "\t",
+  gene_order_file = gene_order,
+  ref_group_names = ref_groups,
+  chr_exclude = c("chrM", "chrY"))
+```
+
+Now we run inferCNV, cutoff = 0.1 is the recommended value for 10x data. We don't use the HMM (CNV calling per region), we only need the smoothed expression to score each cell. `save_rds = FALSE` avoids saving an object at each step (\~2.5 GB), only the final object is kept.
+
+```{r}
+infercnv_obj <- infercnv::run(
+  infercnv_obj,
+  cutoff = 0.1,
+  out_dir = "../data/infercnv_out",
+  cluster_by_groups = TRUE,
+  denoise = TRUE,
+  HMM = FALSE,
+  save_rds = FALSE,
+  num_threads = 4)
+```
+
+The heatmap is saved in `../data/infercnv_out/infercnv.png` : the reference cells are on top, the tested cells below. Tumour cells should show a red band on chr7 (gain) and a blue band on chr10 (loss).
+
+```{r}
+knitr::include_graphics("../data/infercnv_out/infercnv.png")
+```
+
+**Observations on the heatmap**
+
+-   The reference cells (top) are flat, as expected : no region is consistently red or blue.
+
+-   **Tumour NPC-like and Tumour MES-like cells show the classic glioblastoma signature** : a gain of chr7 (red) and a loss of chr10 (blue), present in most of the cells.
+
+-   Other alterations are shared by the tumour cells : a short and strong gain on **chr12** and a loss of **chr13**. A loss on **chr11** is only seen in a part of the NPC-like cells, which could be a subclone.
+
+-   The neurons are not flat (red on chrX, chr16, chr20), but chr7 and chr10 are normal. This is most likely an artefact : neurons are not in the reference, so groups of neuron-specific genes located close to each other on a chromosome look like CNVs.
+
+**CNV score per cell**
+
+The smoothed expression is centered around 1, so we score each cell :
+
+-   `cnv_score` : mean squared deviation from 1, high when the cell has many alterations
+
+-   `chr7` and `chr10` : mean value on these chromosomes, \> 1 is a gain and \< 1 a loss
+
+```{r}
+expr <- infercnv_obj@expr.data
+chr <- infercnv_obj@gene_order[rownames(expr), "chr"]
+
+cnv <- data.frame(
+  row.names = colnames(expr),
+  cnv_score = colMeans((expr - 1)^2),
+  chr7 = colMeans(expr[chr == "chr7", ]),
+  chr10 = colMeans(expr[chr == "chr10", ]))
+cnv$chr7_minus_chr10 <- cnv$chr7 - cnv$chr10
+
+sobjFiltrd <- AddMetaData(sobjFiltrd, cnv)
+```
+
+```{r}
+VlnPlot(sobjFiltrd, features = c("cnv_score", "chr7_minus_chr10"),
+        group.by = "celltype", pt.size = 0, ncol = 1) & RotatedAxis()
+
+ggplot(sobjFiltrd@meta.data, aes(x = chr10, y = chr7, colour = celltype)) +
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  ggtitle("chr7 gain / chr10 loss")
+```
+
+**Observations**
+
+-   The tumour cells form a separate cloud in the top-left corner (chr7 \> 1, chr10 \< 1), all the other cells are around (1, 1).
+
+-   The gap between the two groups is fairly clean, so a threshold on chr7 - chr10 is a reasonable way to classify the cells. Cells close to the threshold can go either way.
+
+**Classification**
+
+A cell is called malignant when its chr7 - chr10 difference is above what we see in 99% of the reference cells. This threshold is a choice, check it on the plots above.
+
+```{r}
+is_ref <- sobjFiltrd$celltype %in% ref_groups
+threshold <- quantile(sobjFiltrd$chr7_minus_chr10[is_ref], 0.99)
+
+sobjFiltrd$cnv_status <- ifelse(sobjFiltrd$chr7_minus_chr10 > threshold, "Malignant", "Normal")
+
+table(sobjFiltrd$celltype, sobjFiltrd$cnv_status)
+DimPlot(sobjFiltrd, group.by = "cnv_status")
+```
+
+**Results per cell type**
+
+```{r}
+cnv_summary <- sobjFiltrd@meta.data %>%
+  mutate(group = ifelse(celltype %in% ref_groups, "Reference", "Tested")) %>%
+  group_by(group, celltype) %>%
+  summarise(n = n(),
+            pct_malignant = round(100 * mean(cnv_status == "Malignant")),
+            median_chr7 = round(median(chr7), 3),
+            median_chr10 = round(median(chr10), 3),
+            .groups = "drop") %>%
+  arrange(desc(group), desc(pct_malignant))
+
+knitr::kable(cnv_summary, col.names = c("Group", "Cell type", "n", "% malignant", "Median chr7", "Median chr10"))
+```
+
+**Interpretation**
+
+-   **Tumour NPC-like (97% malignant) and Tumour MES-like (76%)** : the GBmap annotation is confirmed, these clusters are tumour cells.
+
+-   **About 24% of the MES-like cluster is called normal** : these can be reactive astrocytes (they look like MES-like cells but have no CNV) or tumour cells with a weaker signal close to the threshold. For the next steps we use `cnv_status` rather than the cluster label to select tumour cells.
+
+-   **Unclear (62% malignant)** : this cluster is mostly made of tumour cells of lower quality (low UMI counts), not debris. Keeping it was the right choice.
+
+-   **OPC (16% malignant)** : mostly normal OPC, not OPC-like tumour cells.
+
+-   **Neurons and astrocytes (0 to 2%)** : normal, the sanity check works.
+
+-   **Reference cells (1 to 6%)** : this is the expected false positive rate with a threshold at the 99th percentile of the reference. T/NK cells are a bit higher (6%) but there are only 49 cells.
+
+**Which gene is behind the chr12 gain ?**
+
+The chr12 band could match the CDK4 / MDM2 region (12q14-15), a known amplification in glioblastoma. We check the expression of these genes.
+
+```{r}
+VlnPlot(sobjFiltrd, features = c("MDM2", "CDK4"), group.by = "celltype", pt.size = 0, ncol = 1) & RotatedAxis()
+```
+
+MDM2 is clearly higher in the tumour cells (mean log-normalised expression of 3 to 4.3 in tumour clusters vs below 1 in normal cells), CDK4 is not. The chr12 gain is therefore most likely an **MDM2 amplification**. MDM2 inhibits p53, so this is one way for the tumour to inactivate the p53 pathway. This is a hypothesis based on expression only, it would need to be confirmed on DNA.
+
+**Limits**
+
+-   The classification depends on the threshold (99th percentile of the reference), which is a choice.
+
+-   inferCNV detects large alterations (whole chromosome or arm), not mutations or small events.
+
+-   The reference only contains cell types present in our sample, neurons are not in it which creates artefacts in the neuron cells.
+
+```{r}
+save(sobjFiltrd, file = paste0('../data/processed_data/', sample.name, '_CNV.rda'))
+```
+
+```{r}
+sessionInfo()
+```
