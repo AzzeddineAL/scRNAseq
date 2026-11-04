@@ -1,0 +1,29 @@
+project:
+  type: default
+  output-dir: ../report
+  render:
+    # pipeline order : each document uses the objects saved by the previous ones
+    - Glioblastoma_scRNAseq_QC.qmd
+    - Glioblastoma_scRNAseq_Clustering.qmd
+    - Glioblastoma_scRNAseq_CNV.qmd
+    - Glioblastoma_scRNAseq_States.qmd
+    - Glioblastoma_scRNAseq_TME.qmd
+    - Glioblastoma_scRNAseq_CellChat.qmd
+    - Glioblastoma_scRNAseq_Synthesis.qmd
+
+author:
+  - Azzeddine ALILICHE
+  - Anais HLUSZKO
+  - Corentin OSTA
+date: today
+
+format:
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+    code-tools: true
+
+execute:
+  warning: false
+  message: false
