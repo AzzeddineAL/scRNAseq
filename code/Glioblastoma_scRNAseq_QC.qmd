@@ -225,7 +225,7 @@ Now after filtering Mitochondrial genes and doublets/multiplets + low quality ce
 sobjFiltrd <- NormalizeData(sobjFiltrd, normalization.method = "LogNormalize")
 ```
 
-We can also perform SCTransform, but this method does require some computational ressources since it uses GLMs to adjust residus.
+We can also perform SCTransform, but this method does require some computational ressources since it uses GLMs to adjust residus
 
 now that we are done with QC step we go ahead and save
 
