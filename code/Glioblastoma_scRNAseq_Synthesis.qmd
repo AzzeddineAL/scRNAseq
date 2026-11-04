@@ -1,0 +1,214 @@
+---
+title: "Glioblastoma scRNA-seq : tumour states and microenvironment"
+subtitle: "Synthesis and conclusion"
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(ggplot2)
+  library(CellChat)
+})
+sample.name <- "brain_DV200"
+
+load(paste0('../data/processed_data/', sample.name, '_STATES.rda'))  # sobjFiltrd
+load(paste0('../data/processed_data/', sample.name, '_TME.rda'))     # myeloid, tcells
+cellchat <- readRDS(paste0('../data/processed_data/', sample.name, '_cellchat.rds'))
+```
+
+## Question
+
+A glioblastoma contains **tumour cells**, found in several transcriptional states, and a **tumour microenvironment (TME)** dominated by macrophages. We asked : **in this tumour, which tumour states are present, what microenvironment surrounds them, and which signals might connect them ?**
+
+## Data
+
+-   10x Genomics public dataset *Mixture of Lung Cancer and Glioblastoma FFPE Tissues Dissociated Manually or using gentleMACS Dissociator, Multiplexed Samples, 4 Probe Barcodes* (Chromium Flex, probe-based chemistry, Cell Ranger 7.1.0).
+
+-   We analysed **one sample : the glioblastoma, manual dissociation** (probe barcode BC3). There is no replicate, so all the results describe this tumour only.
+
+## Pipeline
+
+| Step | Report | Main tools | Output |
+|------------------------|------------------------|------------------------|------------------------|
+| 1\. Quality control | [QC](Glioblastoma_scRNAseq_QC.html) | Seurat, scDblFinder | `r ncol(sobjFiltrd)` cells kept |
+| 2\. Clustering & annotation | [Clustering](Glioblastoma_scRNAseq_Clustering.html) | Seurat, SingleR, GBmap label transfer, markers | 11 clusters annotated |
+| 3\. Malignant cells | [CNV](Glioblastoma_scRNAseq_CNV.html) | inferCNV (chr7 gain / chr10 loss) | Malignant / normal call per cell |
+| 4\. Tumour states | [States](Glioblastoma_scRNAseq_States.html) | Neftel et al. 2019 meta-modules, GO (g:Profiler) | MES / AC / NPC / OPC-like states |
+| 5\. Microenvironment | [TME](Glioblastoma_scRNAseq_TME.html) | Sub-clustering, markers, GO (g:Profiler) | TAM sub-populations, T cell profile |
+| 6\. Communication | [CellChat](Glioblastoma_scRNAseq_CellChat.html) | CellChat v2 | Ligand-receptor signals |
+
+QC thresholds : more than 800 genes and 1000 UMI per cell, less than 10% mitochondrial reads, doublets removed with scDblFinder.
+
+## 1. Cell types
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+DimPlot(sobjFiltrd, group.by = "celltype", label = TRUE, repel = TRUE) + NoLegend()
+```
+
+```{r}
+sobjFiltrd@meta.data %>%
+  count(celltype, name = "n") %>%
+  mutate(pct = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n)) %>%
+  knitr::kable(col.names = c("Cell type", "n", "% of cells"))
+```
+
+The sample contains tumour cells, macrophages (myeloid), vascular cells, T/NK cells and a large part of infiltrated brain tissue (neurons, oligodendrocytes, astrocytes, OPC).
+
+## 2. Malignant cells (inferCNV)
+
+```{r}
+knitr::include_graphics("../data/infercnv_out/infercnv.png")
+```
+
+```{r}
+ref_groups <- c("Oligodendrocytes", "Myeloid", "T/NK cells", "Vascular")
+sobjFiltrd@meta.data %>%
+  mutate(group = ifelse(celltype %in% ref_groups, "Reference", "Tested")) %>%
+  group_by(group, celltype) %>%
+  summarise(n = n(),
+            pct_malignant = round(100 * mean(cnv_status == "Malignant")),
+            median_chr7 = round(median(chr7), 3),
+            median_chr10 = round(median(chr10), 3),
+            .groups = "drop") %>%
+  arrange(desc(group), desc(pct_malignant)) %>%
+  knitr::kable(col.names = c("Group", "Cell type", "n", "% malignant", "Median chr7", "Median chr10"))
+```
+
+-   The tumour clusters carry the **classic glioblastoma signature, chr7 gain and chr10 loss**, plus a chr13 loss and a focal chr12 gain, most likely an **MDM2 amplification** (MDM2 is highly expressed in tumour cells only).
+
+-   The OPC cluster is mostly normal, and the neurons, astrocytes and reference cells are flat.
+
+-   **`r sum(sobjFiltrd$cnv_status == "Malignant")` cells are called malignant** and used for the tumour state analysis.
+
+## 3. Tumour states (Neftel et al. 2019)
+
+```{r}
+#| fig-width: 7
+#| fig-height: 6
+tum <- sobjFiltrd@meta.data %>% filter(!is.na(neftel_state))
+
+ggplot(tum, aes(x = neftel_x, y = neftel_y, colour = neftel_state)) +
+  geom_point(size = 0.6) +
+  geom_hline(yintercept = 0) + geom_vline(xintercept = 0) +
+  annotate("text", x = c(-1, 1, -1, 1) * max(abs(tum$neftel_x)), y = c(1, 1, -1, -1) * max(abs(tum$neftel_y)),
+           label = c("OPC-like", "NPC-like", "AC-like", "MES-like"), hjust = c(0, 1, 0, 1), fontface = "bold") +
+  theme_classic() +
+  labs(x = "Relative meta-module score", y = "D", colour = "Neftel state")
+```
+
+```{r}
+tum %>%
+  group_by(neftel_state) %>%
+  summarise(n = n(),
+            pct_tumour = round(100 * n() / nrow(tum), 1),
+            pct_cycling = round(100 * mean(cycling), 1)) %>%
+  arrange(desc(n)) %>%
+  knitr::kable(col.names = c("Neftel state", "n", "% of tumour cells", "% cycling"))
+```
+
+| State | GO enrichment (main terms) | Top marker genes |
+|------------------------|------------------------|------------------------|
+| MES-like | Response to hypoxia, angiogenesis, wound healing | ADM, ANGPTL4, NDRG1, CA12, SERPINE1, CHI3L1 |
+| AC-like | Gliogenesis, glial cell differentiation | ATP1A2, BCAN, KCNJ10, AQP1 |
+| NPC-like | Neurogenesis, epigenetic regulation, cell cycle | CRABP1, ONECUT2, GRIK2, CPLX1 |
+
+-   The tumour combines **three main states : MES-like, NPC-like and AC-like**. OPC-like cells are almost absent.
+
+-   **AC-like and MES-like cells form a continuum**, while NPC-like cells form a distinct group that contains most of the cycling cells.
+
+-   **The MES-like cells are hypoxic** : hypoxia is the strongest GO signal of the whole analysis.
+
+## 4. Microenvironment
+
+```{r}
+#| fig-width: 7
+#| fig-height: 5
+DimPlot(myeloid, group.by = "tam_type", label = TRUE, repel = TRUE) + NoLegend() + ggtitle("TAM sub-populations")
+```
+
+```{r}
+myeloid@meta.data %>%
+  group_by(tam_type) %>%
+  summarise(n = n(), pct_BDM_like = round(100 * mean(origin == "BDM-like"))) %>%
+  arrange(desc(n)) %>%
+  knitr::kable(col.names = c("TAM sub-population", "n", "% BDM-like"))
+```
+
+-   About **`r round(100 * mean(myeloid$origin == "BDM-like"))`% of the TAMs look bone marrow-derived** (BDM), the others microglia-like.
+
+-   Three TAM sub-populations : **microglia-like TAMs**, **hypoxic TAMs** (VEGFA, ADM, SLC2A1, SPP1) and **MRC1+ BDM** (CD163, MRC1, SIGLEC1). One sub-cluster was set aside, it is made of low quality macrophages with ambient tumour RNA.
+
+-   The TAMs lean towards an **immunosuppressive profile** (CD163, SPP1, MRC1 high, IL1B and TNF low).
+
+-   **`r ncol(tcells)` T cells only** : cytotoxic genes but almost no IFNG, no proliferation and exhaustion markers in part of the cells, a "cold" immune environment.
+
+## 5. Communication between the tumour and its microenvironment
+
+```{r}
+#| fig-width: 9
+#| fig-height: 5
+netVisual_bubble(cellchat, sources.use = c("Microglia-like TAM", "Hypoxic TAM", "MRC1+ BDM"),
+                 targets.use = c("Tumour MES-like", "Tumour AC-like", "Tumour NPC-like"),
+                 signaling = "SPP1", remove.isolate = TRUE, angle.x = 45, title.name = "SPP1 : TAM → tumour")
+```
+
+```{r}
+#| fig-width: 7
+#| fig-height: 5
+netVisual_bubble(cellchat, targets.use = "Vascular", signaling = "VEGF",
+                 remove.isolate = TRUE, angle.x = 45, title.name = "VEGF : → vascular cells")
+```
+
+| Hypothesis | Result |
+|------------------------------------|------------------------------------|
+| SPP1 → CD44 (TAM → tumour) | **Supported** : strongest TAM → tumour signal, towards MES-like and AC-like cells |
+| VEGF (hypoxic niche → vessels) | **Supported** : VEGFA → FLT1, mostly from MES-like cells and hypoxic TAMs |
+| OSM → OSMR (TAM → MES-like, Hara et al. 2021) | **Not detected** : OSMR on MES-like cells, but OSM low in TAMs |
+| PD-L1 → PD-1 | **Not detected** : PD-L1 almost absent |
+| CD47 → SIRPA | **Compatible, not tested** (not in CellChatDB) |
+
+## Conclusion
+
+In this glioblastoma, the inferCNV analysis confirmed the malignant cells by the classic chr7 gain and chr10 loss, with a probable MDM2 amplification. The tumour cells are found in **three main states** : NPC-like cells, which form a distinct and proliferating group, and AC-like and MES-like cells, which form a continuum, in line with the plasticity described by Neftel et al.
+
+**Hypoxia is the common thread of the tumour-microenvironment relationship.** The MES-like tumour cells and a population of hypoxic TAMs share the same hypoxia program and probably live in the same poorly oxygenated areas. Both send pro-angiogenic VEGFA signals to the vascular cells, and the TAMs signal to the MES-like cells through **SPP1 → CD44**, an axis linked to the mesenchymal phenotype and to immunosuppression in glioma.
+
+The microenvironment is dominated by **macrophages, mostly bone marrow-derived and immunosuppressive**, while T cells are rare and poorly active, the "cold" profile typical of glioblastoma. The OSM → OSMR mechanism proposed by Hara et al. was not detected, either a feature of this tumour or a sensitivity limit of the data.
+
+**Model for this tumour** : a hypoxic niche in which MES-like tumour cells and hypoxic, immunosuppressive TAMs interact through SPP1 – CD44 and jointly drive angiogenesis through VEGFA, in a microenvironment with little anti-tumour immune activity.
+
+## Limits
+
+-   **A single tumour, a single sample** : no biological replicate, the results are descriptive and generate hypotheses, they cannot be generalised to glioblastoma. Cells of one sample are not independent, so the p-values (DE, GO) are inflated.
+
+-   **Dissociated FFPE tissue** : the proportions of cell types depend on the dissociation, and ambient RNA from tumour cells contaminates other cells (e.g. GFAP in macrophages).
+
+-   **Probe-based chemistry (Flex)** : only the genes of the probe panel are measured, lowly expressed genes (e.g. OSM) can be missed.
+
+-   **Predictions from RNA** : malignant calls (inferCNV), states (module scores) and communications (CellChat) are inferred from expression, not measured directly. Spatial proximity is unknown.
+
+## Perspectives
+
+-   Analyse the second glioblastoma sample of the dataset (gentleMACS dissociation) to check that the results are not driven by the dissociation method.
+
+-   Confirm the hypoxic niche and the SPP1 – CD44 axis on tissue (immunostaining, spatial transcriptomics), and the MDM2 amplification on DNA.
+
+-   Compare with a multi-patient cohort (e.g. GBmap) to see whether this MES / hypoxic profile is frequent.
+
+## References
+
+-   Neftel C. *et al.* An integrative model of cellular states, plasticity, and genetics for glioblastoma. *Cell* 178, 835-849 (2019).
+
+-   Hara T. *et al.* Interactions between cancer cells and immune cells drive transitions to mesenchymal-like states in glioblastoma. *Cancer Cell* 39, 779-792 (2021).
+
+-   Ruiz-Moreno C. *et al.* Charting the single-cell and spatial landscape of IDH-wild-type glioblastoma with GBmap. *Neuro-Oncology* (2025).
+
+-   Tickle T. *et al.* inferCNV of the Trinity CTAT Project (Broad Institute).
+
+-   Jin S. *et al.* CellChat for systematic analysis of cell-cell communication from single-cell transcriptomics. *Nature Protocols* (2024).
+
+-   Hao Y. *et al.* Dictionary learning for integrative, multimodal and scalable single-cell analysis (Seurat v5). *Nature Biotechnology* (2024).

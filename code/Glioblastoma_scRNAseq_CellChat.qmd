@@ -1,0 +1,209 @@
+---
+title: "Glioblastoma_scRNAseq_CellChat"
+format: html
+editor: visual
+---
+
+```{r}
+the.seed <- 42
+set.seed(the.seed)
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(ggplot2)
+  library(CellChat)
+})
+```
+
+```{r}
+sample.name <- "brain_DV200"
+```
+
+**Cell-cell communication between the tumour and its microenvironment**
+
+CellChat looks, for each pair of cell groups, whether one group expresses a **ligand** and the other one its **receptor** (curated human database, CellChatDB). It computes a communication probability, tests it by permutation, and groups the interactions into **pathways**.
+
+Hypotheses from the previous steps :
+
+1.  **OSM → OSMR (TAM → MES-like)** : macrophages push tumour cells towards the MES state (Hara et al., Cancer Cell 2021).
+
+2.  **SPP1 → CD44 (TAM → tumour)** : SPP1 is high in our TAMs, CD44 in our MES-like cells.
+
+3.  **VEGF (hypoxic TAMs and MES-like → vascular cells)** : the shared hypoxic niche.
+
+4.  **Immune checkpoints** : PD-L1 → PD-1 (tumour / TAM → T cells), and CD47 → SIRPA (tumour → TAM, "don't eat me" signal).
+
+This is a prediction from RNA : an expressed ligand-receptor pair does not prove that the interaction happens.
+
+## Cell groups
+
+We reload the tumour states and the TAM sub-populations, and build one group per cell. Neurons, astrocytes, OPC, the "Unclear" cluster, the OPC-like tumour cells (18 cells) and the low quality TAM sub-cluster are left out.
+
+```{r}
+load(paste0('../data/processed_data/', sample.name, '_STATES.rda'))
+load(paste0('../data/processed_data/', sample.name, '_TME.rda'))  # myeloid, tcells
+
+group <- rep(NA_character_, ncol(sobjFiltrd))
+names(group) <- colnames(sobjFiltrd)
+
+is_tumour <- sobjFiltrd$cnv_status == "Malignant" & sobjFiltrd$neftel_state %in% c("MES-like", "AC-like", "NPC-like")
+group[is_tumour] <- paste("Tumour", sobjFiltrd$neftel_state[is_tumour])
+
+tam <- myeloid$tam_type[myeloid$tam_type != "Low quality / ambient RNA"]
+group[names(tam)] <- tam
+
+for (ct in c("T/NK cells", "Vascular", "Oligodendrocytes")) {
+  group[sobjFiltrd$celltype == ct & sobjFiltrd$cnv_status == "Normal"] <- ct
+}
+
+sobjFiltrd$cellchat_group <- group
+cc_obj <- subset(sobjFiltrd, cells = names(group)[!is.na(group)])
+table(cc_obj$cellchat_group)
+```
+
+## CellChat analysis
+
+We use the secreted, ECM-receptor and cell-cell contact interactions (`subsetDB` removes the "Non-protein Signaling" part by default). `future::plan("sequential")` avoids parallel problems on Windows.
+
+```{r}
+cellchat <- createCellChat(object = GetAssayData(cc_obj, layer = "data"),
+                           meta = cc_obj@meta.data, group.by = "cellchat_group")
+cellchat@DB <- subsetDB(CellChatDB.human)
+
+future::plan("sequential")
+cellchat <- subsetData(cellchat)
+cellchat <- identifyOverExpressedGenes(cellchat)
+cellchat <- identifyOverExpressedInteractions(cellchat)
+
+cellchat <- computeCommunProb(cellchat, type = "triMean", seed.use = the.seed)
+cellchat <- filterCommunication(cellchat, min.cells = 10)
+cellchat <- computeCommunProbPathway(cellchat)
+cellchat <- aggregateNet(cellchat)
+cellchat <- netAnalysis_computeCentrality(cellchat, slot.name = "netP")
+
+df_net <- subsetCommunication(cellchat)
+nrow(df_net)
+```
+
+## Global network
+
+```{r}
+#| fig-width: 12
+#| fig-height: 6
+group_size <- as.numeric(table(cellchat@idents))
+par(mfrow = c(1, 2), xpd = TRUE)
+netVisual_circle(cellchat@net$count, vertex.weight = group_size, weight.scale = TRUE,
+                 label.edge = FALSE, title.name = "Number of interactions")
+netVisual_circle(cellchat@net$weight, vertex.weight = group_size, weight.scale = TRUE,
+                 label.edge = FALSE, title.name = "Interaction strength")
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 7
+netAnalysis_signalingRole_heatmap(cellchat, pattern = "outgoing", height = 14) +
+  netAnalysis_signalingRole_heatmap(cellchat, pattern = "incoming", height = 14)
+```
+
+**Observations**
+
+-   Vascular cells are involved in the largest number of interactions, mostly towards the tumour cells. Many of them are extracellular matrix signals (collagen, laminin, fibronectin), which vascular and mural cells produce in large amounts.
+
+-   The tumour AC-like and MES-like cells receive more signals than the NPC-like cells.
+
+-   This global view counts all interactions together, including very general ones (ECM, APP, CD99), so we focus on the pathways linked to our hypotheses.
+
+## TAM → tumour and tumour → TAM
+
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+tam_groups <- c("Microglia-like TAM", "Hypoxic TAM", "MRC1+ BDM")
+tumour_groups <- c("Tumour MES-like", "Tumour AC-like", "Tumour NPC-like")
+
+netVisual_bubble(cellchat, sources.use = tam_groups, targets.use = tumour_groups,
+                 remove.isolate = TRUE, angle.x = 45, title.name = "TAM → tumour")
+```
+
+**Observations**
+
+-   **SPP1 → CD44 is by far the strongest TAM → tumour signal**, mostly from microglia-like and hypoxic TAMs towards the MES-like and AC-like cells.
+
+-   **CD44 is a hub receptor** on the tumour cells : it also receives LGALS9 (galectin-9), FN1 (fibronectin) and MIF. CD44 is a marker of the MES-like state, so the MES-like cells are well equipped to receive TAM signals.
+
+-   Other signals : MIF → CD74 / CXCR4, GRN → SORT1, CXCL12 → CXCR4 (chemokine) and PDGFB → PDGFRA (from MRC1+ BDM towards AC-like and NPC-like cells, PDGF is a growth signal for glioma cells).
+
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+netVisual_bubble(cellchat, sources.use = tumour_groups, targets.use = tam_groups,
+                 remove.isolate = TRUE, angle.x = 45, title.name = "Tumour → TAM")
+```
+
+## Testing the hypotheses
+
+```{r}
+hyp_pathways <- c("OSM", "SPP1", "VEGF", "PD-L1", "SIRP")
+
+hyp <- df_net %>%
+  filter(pathway_name %in% hyp_pathways) %>%
+  select(source, target, interaction_name, pathway_name, prob, pval) %>%
+  arrange(pathway_name, desc(prob))
+
+knitr::kable(hyp, digits = 4)
+
+# which hypothesis pathways are significant at all
+hyp_pathways %in% cellchat@netP$pathways
+```
+
+```{r}
+#| fig-width: 7
+#| fig-height: 7
+for (p in intersect(hyp_pathways, cellchat@netP$pathways)) {
+  netVisual_aggregate(cellchat, signaling = p, layout = "circle")
+}
+```
+
+CD47 → SIRPA is not in CellChatDB human (only CD47 with SIRPG and thrombospondins), so we check the expression of the two genes directly.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4
+Idents(cc_obj) <- "cellchat_group"
+DotPlot(cc_obj, features = c("CD47", "SIRPA", "CD274", "PDCD1", "OSM", "OSMR", "SPP1", "CD44", "VEGFA", "KDR", "FLT1")) +
+  RotatedAxis()
+```
+
+**Results of the hypotheses**
+
+| Hypothesis | CellChat | Result |
+|------------------------|------------------------|------------------------|
+| SPP1 → CD44 (TAM → tumour) | Significant, strongest TAM → tumour signal | **Supported** : all TAM groups → MES-like and AC-like cells (prob \~0.3) |
+| VEGF (hypoxic niche → vascular) | Significant | **Supported** : VEGFA → FLT1 (VEGFR1), strongest from MES-like cells, then hypoxic TAMs |
+| OSM → OSMR (TAM → MES-like) | Not significant | **Not supported here** : OSMR is expressed by the MES-like cells, but OSM is only weakly expressed by the TAMs |
+| PD-L1 → PD-1 (→ T cells) | Not significant | **Not supported** : PD-1 is on the T cells, but PD-L1 (CD274) is almost absent |
+| CD47 → SIRPA (tumour → TAM) | Not in CellChatDB | **Compatible, not tested** : CD47 is expressed by most cell types, SIRPA by the TAMs |
+
+**Interpretation**
+
+-   **The hypoxic niche is the main link between the tumour and its microenvironment** : the MES-like cells and the hypoxic TAMs share the hypoxia program (previous steps) and both send VEGFA towards the vascular cells, a pro-angiogenic signal. The TAMs also send SPP1 to the MES-like cells through CD44, SPP1 is known to support the mesenchymal / invasive phenotype and immunosuppression in glioma.
+
+-   **OSM → OSMR, the mechanism described by Hara et al., is not detected** : the receptor is present on the MES-like cells but the ligand is low in our TAMs. It could be a true difference for this tumour, or a sensitivity issue (low expression, probe-based Flex chemistry).
+
+-   **No sign of PD-L1 / PD-1 signalling**, which fits the few, poorly active T cells seen in the TME step.
+
+**Limits**
+
+-   Prediction from RNA only : an expressed ligand-receptor pair does not prove a physical interaction, and spatial proximity is unknown.
+
+-   CellChat tests the average expression per group : a signal present in a small subset of cells can be missed (e.g. OSM).
+
+-   A single tumour, and small groups for some cell types (46 T cells, 82 MRC1+ BDM).
+
+```{r}
+saveRDS(cellchat, paste0('../data/processed_data/', sample.name, '_cellchat.rds'))
+```
+
+```{r}
+sessionInfo()
+```
