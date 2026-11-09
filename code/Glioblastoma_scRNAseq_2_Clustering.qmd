@@ -1,0 +1,594 @@
+---
+title: "Glioblastoma_scRNAseq_Clustering"
+format: html
+editor: visual
+---
+
+## Analysis setup
+
+A fixed random seed was used to make the stochastic steps of the analysis, including clustering and UMAP, reproducible.
+
+```{r}
+# Set a fixed seed to ensure reproducibility
+the.seed <- 42
+set.seed(the.seed)
+
+# Load the packages required for dimensionality reduction,graph-based clustering and visualisation
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(ggplot2)
+  library(scales)
+})
+```
+
+The sample name and the input file were defined separately. The filtered Seurat object was generated during the quality-control analysis and already contains the normalised RNA-expression matrix.
+
+```{r}
+# Define the sample name used for downstream output files
+sample.name <- "brain_DV200"
+
+# Define the species for subsequent biological analyses
+species <- "Human"
+
+# Define the exact path of the object produced by the QC script
+filtered_file <- paste0('../data/processed_data/',sample.name,'_FILTERED.rda')
+  
+# Load the filtered and normalised Seurat object
+load(filtered_file)
+
+# Verify that the expected Seurat object is present
+stopifnot(exists("sobjFiltrd"))
+stopifnot(inherits(sobjFiltrd, "Seurat"))
+```
+
+A brief summary of the object was inspected before starting the clustering analysis.
+
+```{r}
+# Display the dimensions of the filtered dataset
+cat("Number of cells:", ncol(sobjFiltrd), "\n")
+cat("Number of genes:", nrow(sobjFiltrd), "\n")
+
+# Display the available metadata fields
+colnames(sobjFiltrd@meta.data)
+
+# Display the assays and RNA data layers stored in the object
+Assays(sobjFiltrd)
+Layers(sobjFiltrd[["RNA"]])
+```
+
+## Selection of highly variable genes
+
+Clustering was not performed using every detected gene. Genes with the highest cell-to-cell variability were selected because they carry more information about biological heterogeneity, whereas genes with low variability contribute less to the separation of cellular populations.
+
+The RNA assay was used for all expression-based analyses. Normalisation was not repeated because `LogNormalize` had already been applied at the end of the QC workflow.
+
+```{r}
+# Use the RNA assay for feature selection and dimensionality reduction
+DefaultAssay(sobjFiltrd)<-'RNA'
+
+# Identify the 2,000 most variable genes using the variance-stabilising method
+sobjFiltrd <- FindVariableFeatures(sobjFiltrd, selection.method="vst", nfeatures=2000, 
+                                   verbose = FALSE) 
+
+# Store the complete list of highly variable genes
+list_hvg <- VariableFeatures(sobjFiltrd)
+
+# Display the ten most variable genes
+head(list_hvg, 10)
+
+# Verify the number of selected genes
+length(list_hvg)
+```
+
+The variable-feature plot was used to visualise the relationship between average expression and standardised variance. The ten most variable genes were labelled for interpretation.
+
+```{r}
+# Visualise the variable genes and highlight the ten most variable features
+variable_plot <- VariableFeaturePlot(sobjFiltrd)
+
+LabelPoints(plot = variable_plot,points = head(list_hvg, 10),repel = TRUE)
+```
+
+The most variable genes may reflect cell identity, tumour states, immune activation, cell-cycle activity or technical stress. Their biological interpretation was therefore examined later using cluster markers rather than at this stage.
+
+## Data scaling
+
+Before PCA, the expression values of the variable genes were centred and scaled. This prevents highly expressed genes from dominating the dimensionality-reduction analysis solely because of their absolute expression levels.
+
+```{r}
+sobjFiltrd <- ScaleData(sobjFiltrd)
+```
+
+## Principal component analysis
+
+Principal component analysis was applied to the scaled expression values of the 2,000 variable genes. PCA summarises correlated gene-expression programmes into a smaller number of orthogonal components.
+
+```{r}
+# Compute 50 principal components from the highly variable genes
+sobjFiltrd <- RunPCA(object = sobjFiltrd, features = list_hvg, npcs = 50, seed.use= the.seed,
+                     verbose = FALSE)
+```
+
+The genes contributing most strongly to the first principal components were inspected to determine which biological programmes drove the main sources of variation.
+
+```{r}
+# Display the genes with the strongest loadings for the first six PCs
+print(sobjFiltrd[["pca"]],dims = 1:6,nfeatures = 5)
+
+# Visualise the gene loadings of the first three PCs
+VizDimLoadings(sobjFiltrd,dims = 1:3,reduction = "pca")
+```
+
+A heatmap of the first principal components provides an additional representation of the expression programmes separating the cells.
+
+```{r}
+#| fig-width: 12
+#| fig-height: 8
+
+# Visualise the expression patterns associated with the first six PCs
+DimHeatmap(sobjFiltrd,dims = 1:6,cells = 500,balanced = TRUE)
+```
+
+## Selection of the number of principal components
+
+The elbow plot was used to evaluate how much variation was captured by successive principal components. The curve decreased gradually rather than showing a single sharp elbow.
+
+```{r}
+# Visualise the cells in the first two principal components
+DimPlot(sobjFiltrd, reduction ="pca") 
+
+# Examine the standard deviation associated with the first 50 PCs
+ElbowPlot(sobjFiltrd, ndims=50)
+```
+
+Twenty principal components were retained. This value captured the principal transcriptional structure while maintaining the separation of smaller populations. Exploratory analyses using very few PCs tended to merge small populations, including lymphoid and cycling cells, with larger clusters.
+
+```{r}
+# Number of principal components used for graph construction and UMAP
+nPC <- 20
+```
+
+The choice of 20 PCs is a pragmatic analytical choice rather than an exact biological boundary. Its relevance was evaluated through cluster stability, marker expression and the recovery of biologically interpretable populations.
+
+## Graph construction and clustering
+
+A shared nearest-neighbour graph was constructed from the first 20 principal components. Louvain clustering was then evaluated at several resolutions to assess the stability and granularity of the cellular populations.
+
+```{r}
+# Construct the nearest-neighbour and shared nearest-neighbour graphs
+sobjFiltrd <- FindNeighbors(object = sobjFiltrd, dims=1:nPC, verbose = FALSE) 
+
+# Test several Louvain resolutions, from broad to fine clustering
+sobjFiltrd <- FindClusters(object = sobjFiltrd, resolution=c(0.1, 0.2, 0.5, 1, 2), algorithm =
+                             1, random.seed = the.seed, verbose = FALSE)
+# clusters are stored in meta.data
+```
+
+The number of clusters obtained at each resolution was compared. Low resolutions produce broader populations, whereas high resolutions can separate related states but may also over-fragment biologically coherent populations.
+
+```{r}
+# Define the metadata columns containing the tested resolutions
+resolution_columns <- c(
+  "RNA_snn_res.0.1",
+  "RNA_snn_res.0.2",
+  "RNA_snn_res.0.5",
+  "RNA_snn_res.1",
+  "RNA_snn_res.2")
+
+# Count the number of clusters detected at each resolution
+number_of_clusters <- sapply(resolution_columns,function(column_name) 
+  {length(unique(sobjFiltrd@meta.data[[column_name]]))})
+
+number_of_clusters
+```
+
+The tested resolutions produced:
+
+- 9 clusters at resolution 0.1;
+
+- 11 clusters at resolution 0.2;
+
+- 16 clusters at resolution 0.5;
+
+- 20 clusters at resolution 1;
+
+- 29 clusters at resolution 2.
+
+Resolution 0.2 was selected as a compromise between recovering the major cellular populations and avoiding excessive fragmentation
+
+```{r}
+# Store the selected clustering resolution
+selected_resolution <- "RNA_snn_res.0.2"
+
+# Retrieve and numerically order the selected cluster identities
+selected_clusters <- as.character(sobjFiltrd@meta.data[[selected_resolution]])
+selected_cluster_levels <- as.character(sort(as.integer(unique(selected_clusters))))
+
+# Set the selected clusters as the active Seurat identities
+Idents(sobjFiltrd) <- factor(selected_clusters,levels = selected_cluster_levels)
+
+# Display the number of cells in each cluster
+table(Idents(sobjFiltrd))
+```
+
+The selected clustering contained 11 clusters, with markedly different cell numbers. Cluster size alone was not used to determine biological relevance, as rare immune or vascular populations may contain substantially fewer cells than dominant neural or tumour populations.
+
+## UMAP visualisation
+
+UMAP was computed using the same 20 principal components used for graph construction. UMAP provides a two-dimensional representation of the transcriptional relationships between cells but does not independently define cell types.
+
+```{r}
+# Compute the UMAP representation from the first 20 PCs
+sobjFiltrd <- RunUMAP(object = sobjFiltrd, dims=1:nPC, seed.use = the.seed, verbose = FALSE)
+```
+
+The UMAP was first coloured using the unsupervised cluster numbers. These numbers do not yet represent biological identities.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+
+# Visualise the clusters selected at resolution 0.2
+DimPlot(sobjFiltrd,reduction = "umap",group.by = selected_resolution,label = TRUE,repel = TRUE
+        ) + labs(title = "Unsupervised clustering at resolution 0.2")
+```
+
+The UMAP should not be interpreted as a quantitative measure of distance between populations. Its main purpose here was to visualise the global organisation of the cells and the consistency of the selected clustering.
+
+## Assessment of potential technical effects
+
+Before interpreting the clusters biologically, quality-control metrics were projected onto the UMAP. This step tested whether the clustering was primarily driven by mitochondrial content, library size or the number of detected genes.
+
+Quantile-based colour limits were used for visualisation so that a small number of cells with very high RNA content did not dominate the colour scale. These limits only affect the figure and do not alter the underlying data.
+
+```{r}
+#| fig-width: 15
+#| fig-height: 5
+
+# Project QC metrics onto the UMAP to identify potential technical gradients
+FeaturePlot(object = sobjFiltrd, reduction = 'umap',
+            features = c("percent_mt","nCount_RNA","nFeature_RNA"),
+            min.cutoff = "q05",max.cutoff = "q95",order = TRUE,ncol = 3)
+```
+
+The distributions of the same metrics were also compared across clusters. Large systematic differences would suggest that some clusters might be influenced by sequencing depth or residual low-quality cells rather than biological identity.
+
+```{r}
+#| fig-width: 14
+#| fig-height: 6
+
+# Compare QC distributions across the selected clusters
+VlnPlot(object = sobjFiltrd, features = c("nFeature_RNA","nCount_RNA","percent_mt"),
+        group.by = selected_resolution,pt.size = 0,ncol = 3)
+```
+
+Differences in RNA content between clusters are not necessarily technical artefacts, as cell size and transcriptional activity vary between cell types. Consequently, clusters were not removed solely because they displayed higher UMI or gene counts. Their identities were instead evaluated using cluster-enriched genes, canonical markers and reference-based annotation.
+
+## **Clusters annotation**
+
+#### Identification of cluster marker genes
+
+Before assigning biological identities, we identified the genes that characterised each cluster. This data-driven step reduces reliance on predefined marker lists and provides an unbiased description of the transcriptional programmes detected by the clustering analysis.
+
+```{r}
+# Set the RNA assay as the default assay for marker-gene analysis
+DefaultAssay(sobjFiltrd) <- "RNA"
+
+# Retrieve the cluster identities obtained at resolution 0.2
+cluster_ids <- as.character(sobjFiltrd$RNA_snn_res.0.2)
+
+# Sort the cluster levels numerically to preserve the order 0, 1, 2, ..., 10
+cluster_levels <- as.character(sort(as.integer(unique(cluster_ids))))
+
+# Use the unsupervised cluster numbers as the active identities
+Idents(sobjFiltrd) <- factor(cluster_ids,levels = cluster_levels)
+
+# Check that all expected clusters contain cells
+table(Idents(sobjFiltrd))
+
+# Stop the analysis if only one identity is detected
+stopifnot(length(unique(Idents(sobjFiltrd))) > 1)
+```
+
+Differential expression was performed by comparing each cluster with all remaining cells. Positive log-fold changes identify genes enriched in a cluster, whereas negative log-fold changes identify genes expressed at lower levels in that cluster than in the rest of the datase
+
+```{r}
+# Identify both positively and negatively associated genes for every cluster
+all_markers <- FindAllMarkers(
+  object = sobjFiltrd,
+  only.pos = FALSE,
+  test.use = "wilcox",
+  min.pct = 0.10,
+  logfc.threshold = 0.25,
+  verbose = FALSE
+)
+
+# Verify that marker genes were successfully identified
+dim(all_markers)
+colnames(all_markers)
+head(all_markers)
+
+stopifnot(nrow(all_markers) > 0)
+stopifnot("p_val_adj" %in% colnames(all_markers))
+```
+
+Mitochondrial and ribosomal genes were excluded from the annotation table because they generally reflect cellular stress, RNA content or technical variation rather than cell identity.
+
+```{r}
+library(dplyr)
+
+# Retain statistically significant markers and remove genes that are
+# generally not informative for cell-type annotation
+informative_markers <- all_markers %>%
+  filter(
+    p_val_adj < 0.05,
+    !grepl("^MT-", gene),
+    !grepl("^RPL", gene),
+    !grepl("^RPS", gene)
+  )
+```
+
+### Positive cluster markers
+
+For each cluster, the five genes with the highest positive log-fold changes were selected. The additional difference between `pct.1` and `pct.2` favours genes expressed in a larger proportion of cells within the cluster than outside it.
+
+```{r}
+# Select the five strongest positive markers for each cluster
+top_positive <- informative_markers %>%
+  filter(avg_log2FC > 0,pct.1 - pct.2 > 0.10) %>%group_by(cluster) %>% slice_max(
+    order_by = avg_log2FC,n = 5,with_ties = FALSE) %>%ungroup()
+
+# Display the marker table
+print(top_positive %>%select(cluster, gene, avg_log2FC, pct.1, pct.2),n = Inf)
+```
+
+The full marker table was saved to ensure that the annotation decisions remained traceable and could be revisited if necessary.
+
+```{r}
+# Save all cluster markers for subsequent inspection
+write.csv(all_markers,"../data/processed_data/markers_all_clusters.csv",row.names = FALSE)
+
+# Save the selected positive markers separately
+write.csv(top_positive,"../data/processed_data/top_positive_markers.csv",row.names = FALSE)
+```
+
+### Visualisation of data-driven cluster markers
+
+To keep the figure readable, the three strongest positive markers per cluster were displayed in a DotPlot. Dot size represents the percentage of cells expressing a gene, while colour represents its average scaled expression within the cluster.
+
+```{r}
+#| fig-width: 16
+#| fig-height: 8
+
+# Select three representative positive markers per cluster for visualisation
+top3_positive <- top_positive %>% group_by(cluster) %>%
+  slice_max(order_by = avg_log2FC,n = 3,with_ties = FALSE) %>% ungroup()
+
+# Organise genes according to the cluster in which they were identified
+positive_marker_list <- split(top3_positive$gene,paste0("Cluster ", top3_positive$cluster))
+
+# Visualise the expression of the selected markers across all clusters
+DotPlot(sobjFiltrd,features = positive_marker_list,group.by = "RNA_snn_res.0.2",cluster.idents = FALSE) + RotatedAxis() + labs( title = "Top positive markers of each cluster",x = "Cluster-enriched genes",y = "Cluster") + theme(strip.text.x = element_text(angle = 90,hjust = 0,size = 8))
+```
+
+### Negatively associated genes
+
+Genes with negative log-fold changes are expressed at lower levels in a given cluster than in the remaining cells. These genes can support an annotation by excluding incompatible transcriptional programmes. However, they should not be interpreted as specific negative markers without considering established biological knowledge.
+
+```{r}
+# Select the five most strongly depleted genes in each cluster
+top_negative <- informative_markers %>% filter(avg_log2FC < 0) %>% group_by(cluster) %>%
+  slice_min(order_by = avg_log2FC,n = 5,with_ties = FALSE) %>% ungroup()
+
+# Display the negatively associated genes
+print(top_negative %>% select(cluster, gene, avg_log2FC, pct.1, pct.2),n = Inf)
+```
+
+Statistically depleted genes are not always the most biologically informative negative markers. Therefore, expected positive markers and markers of incompatible lineages were examined together in a curated panel
+
+## Reference-based annotation with SingleR
+
+SingleR was first used to compare the cluster-level expression profiles with the Human Primary Cell Atlas. This general reference was expected to identify broad immune, vascular and neural lineages, but not necessarily glioblastoma-specific malignant states.
+
+#### SingleR setup
+
+```{r}
+#| eval: false
+# run once to install the packages
+BiocManager::install(c("SingleR", "celldex"))
+```
+
+```{r}
+library(SingleR)
+library(celldex)
+library(scrapper)
+
+# Load a general human primary-cell reference
+ref <- celldex::HumanPrimaryCellAtlasData()
+
+# Annotate clusters rather than individual cells
+pred <- SingleR(test = GetAssayData(sobjFiltrd, layer = "data"),ref = ref,
+  labels = ref$label.main,
+  clusters = sobjFiltrd$RNA_snn_res.0.2 # remove if we want to annotate all cells
+)
+
+# report annotation on each cell
+sobjFiltrd$singler<- pred$pruned.labels[match(sobjFiltrd$RNA_snn_res.0.2, rownames(pred))]
+
+# Visualise the SingleR prediction with a Plot
+DimPlot(sobjFiltrd, group.by = "singler", label = TRUE, repel = TRUE)
+
+# Examine the reference-assignement scores
+plotScoreHeatmap(pred)
+  
+```
+
+SingleR predictions were treated as preliminary because the Human Primary Cell Atlas does not contain the complete diversity of malignant glioblastoma states. That's lead to incomplete Annotation, probably better to annotate each cell separately rather than annotating entire clusters.
+
+## Glioblastoma-specific annotation with GBmap
+
+To improve the identification of neural, microenvironmental and malignant populations, annotations were transferred from the glioblastoma-specific GBmap reference (for that we need to download the ref database (core)).
+
+Link : Harmonized single-cell landscape, intercellular crosstalk and tumor architecture of glioblastoma - CZ CELLxGENE Discover
+
+**Alternative method : using API** (but you still need to download the map core file 8gb)
+
+### GBmap setup
+
+CELLxGENE only provides a h5ad file, so we first build a light Seurat reference with `prep_gbmap_ref.R` (run it once from the code folder), then we transfer the GBmap annotations to our cells.
+
+```{r}
+# Load the preprocessed GBmap reference
+gbmap <- readRDS("../data/gbmap_core/gbmap_core_ref.rds")
+
+# Identify anchors between the GBmap reference and the query dataset
+anchors <- FindTransferAnchors(
+  reference = gbmap, query = sobjFiltrd,
+  normalization.method = "LogNormalize",
+  reference.reduction = "pca", dims = 1:30)
+
+# Transfer three levels of GBmap annotation to the query cells
+sobjFiltrd <- TransferData(
+  anchorset = anchors, reference = gbmap,
+  refdata = list(level1 = "level1", level3 = "level3", level4 = "level4"),
+  query = sobjFiltrd, dims = 1:30)
+```
+
+The level-3 GBmap annotations provide an intermediate level of biological detail and were compared with the unsupervised clusters.
+
+```{r}
+# Visualise the transferred level-3 GBmap labels
+DimPlot(sobjFiltrd, group.by = "predicted.level3", label = TRUE, repel = TRUE)
+
+# Visualise the confidence score of the GBmap level-3 predictions
+FeaturePlot(sobjFiltrd, "predicted.level3.score")
+
+# Compare cluster numbers with GBmap predictions
+table(sobjFiltrd$RNA_snn_res.0.2, sobjFiltrd$predicted.level3)
+```
+
+GBmap predictions were used as supporting evidence rather than definitive labels. Reference-based mapping can be affected by differences in sample preparation, FFPE RNA quality and the composition of the reference atlas.
+
+## Manual validation of maping using marker
+
+The final annotation was based on concordance between data-driven marker genes, canonical cell-type markers, SingleR and GBmap predictions. Multiple markers were considered for each population because the expression of a single gene may be affected by dropout, ambient RNA or shared biological programmes.
+
+```{r}
+#| fig-width: 15
+#| fig-height: 5.5
+canonical_markers <- list(
+  "Exc. neuron" = c("SLC17A7", "TBR1", "NRGN"),
+  "Inh. neuron" = c("GAD1", "GAD2", "SST"),
+  "Oligo"       = c("MOG", "MOBP", "PLP1"),
+  "OPC"         = c("PDGFRA", "GPR17", "PCDH15"),
+  "Astro"       = c("AQP4", "WIF1", "SLC39A12"),
+  "Tumour MES"  = c("CHI3L1", "CD44", "TNC"),
+  "Tumour NPC"  = c("SOX4", "ONECUT2", "MYCN"),
+  "Cycling"     = c("MKI67", "TOP2A"),
+  "Myeloid"     = c("CD163", "CSF1R", "P2RY12"),
+  "T/NK"        = c("CD3E", "TRAC", "GZMA"),
+  "Endothelial" = c("CLDN5", "VWF"),
+  "Mural"       = c("RGS5", "PDGFRB"))
+
+# Remove genes that are not present in the FFPE expression matrix
+canonical_markers <- lapply(canonical_markers, function(genes) {
+  intersect(genes, rownames(sobjFiltrd))})
+
+# Remove marker groups for which no gene was detected
+canonical_markers <- canonical_markers[lengths(canonical_markers) > 0]
+```
+
+The canonical-marker DotPlot was used to verify the presence of expected positive markers and the absence of incompatible lineage programmes. This figure provides the main visual justification for the manual annotation
+
+```{r}
+#| fig-width: 16
+#| fig-height: 7
+
+DotPlot(sobjFiltrd,features = canonical_markers,group.by = "RNA_snn_res.0.2",
+        cluster.idents = FALSE) + RotatedAxis() + 
+  labs(title = "Canonical markers used for manual annotation", x = "Canonical marker genes",
+    y = "Cluster") + theme(strip.text.x = element_text(angle = 90,hjust = 0,size = 8))
+```
+
+## Inspection of ambiguous populations
+
+Selected genes were visualised individually on the UMAP to confirm that their expression was localised to the expected clusters. This step was particularly important for distinguishing normal neural populations from tumour cells expressing neural or glial programmes.
+
+```{r}
+# Visualise representative lineage and tumour-state markers on the UMAP
+FeaturePlot(sobjFiltrd,features = c("CHI3L1","CD44","SLC17A7","NRGN","MOG","PLP1","ONECUT2",
+    "MKI67"),reduction = "umap",order = TRUE,ncol = 2)
+```
+
+Expression distributions can also be examined across clusters using violin plots.
+
+```{r}
+# Compare the distribution of selected markers across clusters
+VlnPlot(sobjFiltrd,features = c("CHI3L1","SLC17A7","MOG","ONECUT2"),
+        group.by = "RNA_snn_res.0.2",pt.size = 0,ncol = 2)
+```
+
+## Final manual annotation
+
+Cluster labels were assigned conservatively by combining the different sources of evidence. Populations with a neural or glial expression programme were not automatically considered malignant, as glioblastoma cells can resemble normal brain cell types. Tumour-related labels therefore remain provisional until validation by CNV analysis.
+
+Cluster 6 has low UMI counts and no clear marker, but some cells express cycling genes, so we keep it as "Unclear" and let inferCNV decide.
+
+```{r}
+# Restore the numerical cluster identities before renaming them
+cluster_ids <- as.character(sobjFiltrd$RNA_snn_res.0.2)
+cluster_levels <- as.character(sort(as.integer(unique(cluster_ids))))
+Idents(sobjFiltrd) <- factor(cluster_ids,levels = cluster_levels)
+
+# Assign the manually curated labels
+new_labels <- c(
+  "0" = "Tumour MES-like",
+  "1" = "Excitatory neurons",
+  "2" = "Myeloid",
+  "3" = "Oligodendrocytes",
+  "4" = "Tumour NPC-like",
+  "5" = "Vascular",
+  "6" = "Unclear",
+  "7" = "Inhibitory neurons",
+  "8" = "OPC",
+  "9" = "Astrocytes",
+  "10" = "T/NK cells")
+
+# Replace the cluster numbers with the curated biological labels
+sobjFiltrd <- RenameIdents(sobjFiltrd, new_labels)
+
+# Store the final annotation in the metadata
+sobjFiltrd$celltype <- Idents(sobjFiltrd)
+
+# Check the number of cells assigned to each population
+table(sobjFiltrd$celltype)
+
+```
+
+The final annotation was displayed on the UMAP. The `Unclear` label was retained for cells lacking a sufficiently coherent marker signature, rather than forcing an unsupported biological identity.
+
+```{r}
+#| fig-width: 11
+#| fig-height: 7
+
+DimPlot(sobjFiltrd,reduction = "umap",group.by = "celltype",label = TRUE,repel = TRUE) +labs(
+  title = "Manual cell-type annotation")
+```
+
+Finally, the annotated object was saved for the downstream tumour-state, microenvironment and CNV analyses.
+
+```{r}
+# Save the annotated Seurat object
+save(sobjFiltrd,file = paste0("../data/processed_data/",sample.name,"_ANNOTATED.rda"))
+```
+
+# The question that we are asking :
+
+A glioblastoma contains two main populations that interact:
+
+- **Tumor cells**, which do not form a homogeneous population but pass through multiple "states";
+
+- **The tumor microenvironment (TME)**: the non-tumor cells present within the tumor. In glioblastoma, these are mainly macrophages and microglia (TAMs), which can represent a large portion of the cells. Blood vessels, a small number of T lymphocytes, and infiltrated brain tissue are also found there.
+
+**The general question is therefore: in this tumor, which tumor states are present, what microenvironment surrounds them, and what signals might connect them?é**
