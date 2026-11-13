@@ -11,7 +11,7 @@ editor: visual
 
 This document performs the quality control of the glioblastoma sample dissociated with the gentleMACS Octo Dissociator. The sample originates from the same donor and FFPE specimen as the manually dissociated sample, and was processed with the same probe panel, in the same GEM lane and with the same Cell Ranger version (7.1.0). The dissociation method is therefore the only experimental difference between the two samples.
 
-The workflow and the thresholds are identical to those applied to the Manual sample (`Glioblastoma_scRNAseq_QC.qmd`), so that the quality metrics of both samples are directly comparable. A fixed random seed was used to ensure reproducibility, particularly for the doublet-detection step.
+The workflow, including the ambient RNA correction with `SoupX`, and the thresholds are identical to those applied to the Manual sample, so that the quality metrics of both samples are directly comparable. A fixed random seed was used to ensure reproducibility; it was reset before each stochastic step (rounding of the corrected counts and doublet detection).
 
 ```{r}
 # Define the sample information
@@ -31,6 +31,7 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(SingleCellExperiment)
   library(scDblFinder)
+  library(SoupX)
 })
 ```
 
@@ -132,14 +133,83 @@ A total of `r fmt(n_above_minumi)` barcodes exceeded the applied threshold of `r
 
 The transition was not used as a strict automated cell-calling threshold: subsequent filtering was based on the observed gene, UMI and mitochondrial distributions. As the raw matrix was used, the initial gene and UMI filters also acted as an empirical empty-droplet filter. A statistical method such as `DropletUtils::emptyDrops()` could be used as a complementary sensitivity analysis, but it was not used to define the primary dataset in this workflow.
 
+## Ambient RNA correction
+
+Barcodes containing RNA released by lysed cells can carry a background signal that is shared across all droplets. This ambient RNA was estimated and removed with `SoupX`, using the empty droplets of the raw matrix to define the background profile and the candidate cells (barcodes with at least 200 detected genes) as the cell-containing droplets.
+
+```{r}
+# Define the candidate cells (barcodes with at least 200 detected genes)
+cell_barcodes <- colnames(scmat)[Matrix::colSums(scmat > 0) >= 200]
+filt_mat <- scmat[, cell_barcodes]
+
+# Initialise the SoupChannel with the raw and the candidate-cell matrices
+sc <- SoupChannel(tod = scmat, toc = filt_mat)
+```
+
+SoupX requires a partition of the cells to identify cell-type-specific markers. A temporary clustering of the candidate cells was therefore performed; it was used only for the estimation of the contamination fraction.
+
+```{r}
+# Perform a temporary clustering of the candidate cells
+sobj_temp <- CreateSeuratObject(counts = filt_mat)
+sobj_temp <- NormalizeData(sobj_temp, verbose = FALSE)
+sobj_temp <- FindVariableFeatures(sobj_temp, verbose = FALSE)
+sobj_temp <- ScaleData(sobj_temp, verbose = FALSE)
+sobj_temp <- RunPCA(sobj_temp, verbose = FALSE)
+sobj_temp <- FindNeighbors(sobj_temp, dims = 1:20, verbose = FALSE)
+sobj_temp <- FindClusters(sobj_temp, resolution = 0.5, verbose = FALSE)
+
+# Provide the clusters to SoupX
+sc <- setClusters(sc, setNames(sobj_temp$seurat_clusters, colnames(sobj_temp)))
+```
+
+The global contamination fraction (rho) was estimated automatically, with the default SoupX parameters written explicitly.
+
+```{r}
+# Estimate the ambient RNA contamination fraction
+sc <- autoEstCont(sc, tfidfMin = 1.0, soupQuantile = 0.90,
+                  priorRho = 0.05, priorRhoStdDev = 0.1)
+
+# Record the estimated contamination fraction
+soupx_rho <- sc$fit$rhoEst
+```
+
+The corrected counts were generated as integers for downstream compatibility. Rounding to integers is stochastic, so the seed was reset immediately before this step.
+
+```{r}
+# Reset the seed before the stochastic rounding of the corrected counts
+set.seed(the.seed)
+
+# Generate the corrected count matrix
+adj_matrix <- adjustCounts(sc, roundToInt = TRUE)
+```
+
+The overall impact of the correction was assessed from the amount of RNA removed and from the genes forming the main part of the background.
+
+```{r}
+# Quantify the ambient UMIs removed from the candidate cells
+removed_counts <- filt_mat - adj_matrix
+total_original <- sum(filt_mat)
+total_removed <- sum(removed_counts)
+soupx_pct_removed <- round(100 * total_removed / total_original, 2)
+
+# Identify the genes most affected by the correction
+top_soup_genes <- head(sort(Matrix::rowSums(removed_counts), decreasing = TRUE), 10)
+
+cat("Estimated contamination fraction (rho):", round(soupx_rho, 3), "\n")
+cat("Ambient UMIs removed:", total_removed, "(", soupx_pct_removed, "% of the UMIs of the candidate cells )\n")
+print(top_soup_genes)
+```
+
+The estimated contamination fraction was `r round(soupx_rho, 3)`, and `r soupx_pct_removed`% of the UMIs of the candidate cells were removed. The genes most affected were `r paste(names(top_soup_genes), collapse = ", ")`.
+
 ## Initial creation of the Seurat object
 
-An initial Seurat object was created by retaining genes detected in at least five barcodes and barcodes containing at least 200 detected genes. This first permissive filtering step removed the lowest-complexity portion of the raw matrix while preserving candidate cells for further inspection.
+An initial Seurat object was created from the corrected counts by retaining genes detected in at least five barcodes and barcodes containing at least 200 detected genes. This first permissive filtering step removed the lowest-complexity portion of the matrix while preserving candidate cells for further inspection.
 
 ```{r}
 # Create an initial Seurat object using permissive thresholds
 sobj <- CreateSeuratObject(
-  counts = scmat,
+  counts = adj_matrix,
   min.cells = 5,
   min.features = 200,
   project = sample.name
@@ -168,11 +238,11 @@ head(sobj@meta.data)
 GetAssayData(sobj, assay = "RNA", layer = "counts")[1:5, 1:5]
 ```
 
-The raw matrix and the barcode-rank table were no longer required after creation of the Seurat object.
+The raw and intermediate matrices were no longer required after creation of the Seurat object.
 
 ```{r}
 # Remove large intermediate objects to release memory
-rm(nb_umi_by_barcode, scmat)
+rm(nb_umi_by_barcode, scmat, filt_mat, adj_matrix, removed_counts, sobj_temp, sc)
 gc()
 ```
 
@@ -489,7 +559,7 @@ The final dataset contained `r fmt(n_final_cells)` predicted singlets and `r fmt
 
 ## QC comparison with the Manual sample
 
-The Manual sample was processed with the same workflow and thresholds. Its filtered object was loaded in a separate environment, so that the Octo object is not overwritten, and only its cell-level metadata was retained.
+The Manual sample was processed with the same workflow, ambient RNA correction and thresholds. Its filtered object was loaded in a separate environment, so that the Octo object is not overwritten, and only its cell-level metadata was retained.
 
 ```{r}
 # Locate the filtered object of the Manual sample (file-name case is ignored)
@@ -506,6 +576,11 @@ manual_meta <- manual_env$sobjFiltrd@meta.data
 # Verify that the QC metrics are available
 metric_cols <- c("nFeature_RNA", "nCount_RNA", "percent_mt")
 stopifnot(all(metric_cols %in% colnames(manual_meta)))
+
+# Retrieve the QC summary stored with the Manual object (NULL if absent)
+get_misc <- function(obj, slot) tryCatch(Misc(obj, slot = slot), error = function(e) NULL)
+manual_funnel <- get_misc(manual_env$sobjFiltrd, "qc_funnel")
+manual_soupx <- get_misc(manual_env$sobjFiltrd, "soupx")
 
 # Release the memory used by the Manual object
 n_manual_final <- nrow(manual_meta)
@@ -591,35 +666,62 @@ qc_ecdf("nFeature_RNA", "Detected genes") +
   plot_layout(guides = "collect")
 ```
 
-The number of cells retained at each step was compared between the two samples. The first two steps of the Manual sample were taken from its QC report, and its final count was read from its filtered object.
+The number of cells retained at each step and the ambient RNA correction were compared between the two samples. These summaries are read from the objects themselves, where each QC document stores them.
 
 ```{r}
-# Compare the QC funnel of the two samples
-manual_funnel <- c(candidates = 10306, after_filters = 4278, final = n_manual_final)
-octo_funnel <- c(candidates = n_initial_cells, after_filters = n_after_mito,
-                 final = n_final_cells)
+# Build the QC funnel of the Octo sample
+funnel_steps <- c("Candidate barcodes (at least 200 genes, after ambient correction)",
+                  "After gene and UMI filters",
+                  "After mitochondrial filter",
+                  "After doublet removal (final)")
+octo_funnel <- c(candidates = n_initial_cells, after_complexity = n_after_complexity,
+                 after_mito = n_after_mito, final = n_final_cells)
 
-funnel_comparison <- data.frame(
-  step = c("Barcodes with at least 200 genes",
-           "After gene, UMI and mitochondrial filters",
-           "After doublet removal (final)"),
-  Manual = manual_funnel,
-  Octo = octo_funnel,
-  row.names = NULL
-)
-
-# Add the doublet rate and the fraction of Cell Ranger cells retained
-funnel_extra <- data.frame(
-  step = c("Predicted doublets (% of filtered cells)",
-           "Final cells (% of Cell Ranger cells)"),
-  Manual = round(c(100 * (1 - manual_funnel[["final"]] / manual_funnel[["after_filters"]]),
-                   100 * manual_funnel[["final"]] / cellranger_cells[["Manual"]]), 1),
-  Octo = round(c(100 * (1 - octo_funnel[["final"]] / octo_funnel[["after_filters"]]),
-                 100 * octo_funnel[["final"]] / cellranger_cells[["Octo"]]), 1)
-)
-
+# Compare the funnels when the Manual summary is available
+if (is.null(manual_funnel)) {
+  message("The Manual object carries no QC summary: re-render the Manual QC document.")
+  funnel_comparison <- data.frame(step = funnel_steps[4], Manual = n_manual_final,
+                                  Octo = n_final_cells)
+} else {
+  funnel_comparison <- data.frame(
+    step = funnel_steps,
+    Manual = unname(manual_funnel[names(octo_funnel)]),
+    Octo = unname(octo_funnel)
+  )
+}
 funnel_comparison
-funnel_extra
+```
+
+```{r}
+# Compare the doublet rate and the fraction of Cell Ranger cells retained
+if (!is.null(manual_funnel)) {
+  funnel_extra <- data.frame(
+    metric = c("Predicted doublets (% of cells after the mitochondrial filter)",
+               "Final cells (% of Cell Ranger cells)"),
+    Manual = round(c(100 * (1 - manual_funnel[["final"]] / manual_funnel[["after_mito"]]),
+                     100 * manual_funnel[["final"]] / cellranger_cells[["Manual"]]), 1),
+    Octo = round(c(100 * (1 - octo_funnel[["final"]] / octo_funnel[["after_mito"]]),
+                   100 * octo_funnel[["final"]] / cellranger_cells[["Octo"]]), 1)
+  )
+  funnel_extra
+}
+```
+
+```{r}
+# Compare the ambient RNA correction of the two samples
+if (!is.null(manual_soupx)) {
+  ambient_comparison <- data.frame(
+    metric = c("Estimated contamination fraction (rho)",
+               "UMIs removed (% of the UMIs of the candidate cells)"),
+    Manual = c(round(manual_soupx$rho, 3), manual_soupx$pct_removed),
+    Octo = c(round(soupx_rho, 3), soupx_pct_removed)
+  )
+  ambient_comparison
+
+  # Display the genes most affected by the correction in each sample
+  cat("Manual:", paste(manual_soupx$top_genes, collapse = ", "), "\n")
+  cat("Octo:  ", paste(names(top_soup_genes), collapse = ", "), "\n")
+}
 ```
 
 The Octo sample retained `r fmt(n_final_cells)` cells and the Manual sample `r fmt(n_manual_final)` cells. The median number of detected genes was `r fmt(qc_summary_by_sample$median_genes[qc_summary_by_sample$sample == "Octo"])` for the Octo sample and `r fmt(qc_summary_by_sample$median_genes[qc_summary_by_sample$sample == "Manual"])` for the Manual sample, and the median number of UMIs was `r fmt(qc_summary_by_sample$median_umi[qc_summary_by_sample$sample == "Octo"])` and `r fmt(qc_summary_by_sample$median_umi[qc_summary_by_sample$sample == "Manual"])`, respectively. The Kolmogorov-Smirnov statistics were `r round(ks_stats[["nFeature_RNA"]], 2)` for detected genes, `r round(ks_stats[["nCount_RNA"]], 2)` for UMIs and `r round(ks_stats[["percent_mt"]], 2)` for the mitochondrial percentage.
@@ -660,6 +762,14 @@ table(sobjFiltrd$sample)
 The filtered and normalised Seurat object was saved for the integration analysis. It keeps the object name `sobjFiltrd` used for the Manual sample; the two objects are therefore loaded into separate environments in the integration document.
 
 ```{r}
+# Store the QC summary with the object for the joint analysis
+Misc(sobjFiltrd, slot = "qc_funnel") <- c(candidates = n_initial_cells,
+                                         after_complexity = n_after_complexity,
+                                         after_mito = n_after_mito,
+                                         final = n_final_cells)
+Misc(sobjFiltrd, slot = "soupx") <- list(rho = soupx_rho, pct_removed = soupx_pct_removed,
+                                        top_genes = names(top_soup_genes))
+
 # Define the output path
 filtered_output_file <- paste0("../data/processed_data/", sample.name, "_FILTERED.rda")
 
