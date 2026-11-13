@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Course UM5BIS01_Single-Cell RNA-Seq Data Analysis - S1-26</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Glioblastoma_scRNAseq_1_QC_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Glioblastoma_scRNAseq_1_QC_files/libs/quarto-html/quarto.js"></script>
+<script src="Glioblastoma_scRNAseq_1_QC_files/libs/quarto-html/popper.min.js"></script>
+<script src="Glioblastoma_scRNAseq_1_QC_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Glioblastoma_scRNAseq_1_QC_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Glioblastoma_scRNAseq_1_QC_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Glioblastoma_scRNAseq_1_QC_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Glioblastoma_scRNAseq_1_QC_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Glioblastoma_scRNAseq_1_QC_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Glioblastoma_scRNAseq_1_QC_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Course UM5BIS01_Single-Cell RNA-Seq Data Analysis - S1-26</h1>
+<p class="subtitle lead">Glioblastoma FFPE Tissues Dissociated Manually, Multiplexed Samples</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="quality-check-of-the-data" class="level2">
+<h2 class="anchored" data-anchor-id="quality-check-of-the-data">Quality Check of the data</h2>
+<section id="analysis-setup" class="level3">
+<h3 class="anchored" data-anchor-id="analysis-setup">Analysis setup</h3>
+<p>A fixed random seed was used to ensure reproducibility, particularly for the doublet-detection step. The data come from the 10X Genomics base.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the sample information</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>sample.name <span class="ot">&lt;-</span> <span class="st">"Brain_DV200"</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>species <span class="ot">&lt;-</span> <span class="st">"Human"</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Set a fixed random seed for reproducibility</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>the.seed <span class="ot">&lt;-</span> <span class="dv">42</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(the.seed)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Format numbers consistently in the text</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>fmt <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">format</span>(x, <span class="at">big.mark =</span> <span class="st">","</span>, <span class="at">scientific =</span> <span class="cn">FALSE</span>, <span class="at">trim =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the packages required for quality control and doublet detection</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Seurat)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(dplyr)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(SingleCellExperiment)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(scDblFinder)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Dataset from 10x Genomincs : Manual dissection</p>
+<p><a href="https://cf.10xgenomics.com/samples/cell-exp/7.1.0/4plex_human_lungcancer_glioblastoma_scFFPE_multiplex_Glioblastoma_Manual_BC3/4plex_human_lungcancer_glioblastoma_scFFPE_multiplex_Glioblastoma_Manual_BC3_count_sample_raw_feature_bc_matrix.tar.gz" class="uri">https://cf.10xgenomics.com/samples/cell-exp/7.1.0/4plex_human_lungcancer_glioblastoma_scFFPE_multiplex_Glioblastoma_Manual_BC3/4plex_human_lungcancer_glioblastoma_scFFPE_multiplex_Glioblastoma_Manual_BC3_count_sample_raw_feature_bc_matrix.tar.gz</a></p>
+</section>
+</section>
+<section id="loading-the-raw-count-matrix" class="level2">
+<h2 class="anchored" data-anchor-id="loading-the-raw-count-matrix">Loading the raw count matrix</h2>
+<p>The dataset corresponds to the manually dissociated glioblastoma sample from the 10x Genomics FFPE multiplex experiment. The raw feature-barcode matrix was used, meaning that it contains both cell-containing droplets and a large number of empty droplets.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path to the raw 10x Genomics feature-barcode matrix</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>raw_data_path <span class="ot">&lt;-</span> <span class="st">"../data/raw_data/sample_raw_feature_bc_matrix"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the sparse count matrix</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>scmat <span class="ot">&lt;-</span> <span class="fu">Read10X</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">data.dir =</span> raw_data_path</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify the structure of the imported object</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">class</span>(scmat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "dgCMatrix"
+attr(,"package")
+[1] "Matrix"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(scmat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1]  37143 392837</code></pre>
+</div>
+</div>
+<p>The dimensions of the raw matrix were recorded before filtering.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Record the dimensions of the unfiltered matrix</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>n_raw_features <span class="ot">&lt;-</span> <span class="fu">nrow</span>(scmat)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>n_raw_barcodes <span class="ot">&lt;-</span> <span class="fu">ncol</span>(scmat)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Raw features:"</span>, n_raw_features, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Raw features: 37143 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Raw barcodes:"</span>, n_raw_barcodes, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Raw barcodes: 392837 </code></pre>
+</div>
+</div>
+<p>The raw matrix contained 37 143 features and 392 837 barcodes. At this stage, barcodes should not all be interpreted as cells because the raw matrix includes empty droplets and background RNA.</p>
+</section>
+<section id="barcode-rank-curve" class="level2">
+<h2 class="anchored" data-anchor-id="barcode-rank-curve">Barcode-rank curve</h2>
+<p>The total number of UMIs was calculated for every barcode. Barcodes were then ranked from the highest to the lowest RNA content to generate a barcode-rank, or knee, plot.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the total number of UMIs detected in each barcode</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>nb_umi_by_barcode <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">barcode =</span> <span class="fu">colnames</span>(scmat),<span class="at">nb_umi =</span> Matrix<span class="sc">::</span><span class="fu">colSums</span>(scmat))</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Rank barcodes from the highest to the lowest UMI count</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>nb_umi_by_barcode <span class="ot">&lt;-</span> nb_umi_by_barcode <span class="sc">%&gt;%</span> <span class="fu">arrange</span>(<span class="fu">desc</span>(nb_umi)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">barcode_rank =</span> <span class="fu">seq_len</span>(<span class="fu">n</span>()))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The barcode-rank curve was used as a diagnostic representation of the transition between RNA-rich droplets and the background population.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(nb_umi_by_barcode,<span class="fu">aes</span>(<span class="at">x =</span> barcode_rank,<span class="at">y =</span> nb_umi)) <span class="sc">+</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">0.5</span>,<span class="at">alpha =</span> <span class="fl">0.6</span>) <span class="sc">+</span><span class="fu">scale_x_log10</span>(<span class="at">name =</span> <span class="st">"Droplet rank (log scale)"</span>) <span class="sc">+</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_log10</span>(<span class="at">name =</span> <span class="st">"Number of UMIs per droplet (log scale)"</span>) <span class="sc">+</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Barcode-rank plot of the "</span>,sample.name,<span class="st">" sample"</span>)) <span class="sc">+</span><span class="fu">theme_classic</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in scale_y_log10(name = "Number of UMIs per droplet (log scale)"):
+log-10 transformation introduced infinite values.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The curve displayed a broad transition in the range of a few thousand UMIs. Because the transition was not used as a strict automated cell-calling threshold, subsequent filtering was based on the observed gene, UMI and mitochondrial distributions.</p>
+<p>As the raw matrix was used, the initial gene and UMI filters also acted as an empirical empty-droplet filter. A statistical method such as <code>DropletUtils::emptyDrops()</code> could be used as a complementary sensitivity analysis, but it was not used to define the primary dataset in this workflow.</p>
+<p>By visualization, we take 3000 as the knee of this plot.</p>
+</section>
+<section id="initial-creation-of-the-seurat-object" class="level2">
+<h2 class="anchored" data-anchor-id="initial-creation-of-the-seurat-object">Initial creation of the Seurat object</h2>
+<p>An initial Seurat object was created by retaining genes detected in at least five barcodes and barcodes containing at least 200 detected genes. This first permissive filtering step removed the lowest-complexity portion of the raw matrix while preserving candidate cells for further inspection</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">library</span>(SoupX))</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Define candidate cells (barcodes with &gt;= 200 detected genes)</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>cell_barcodes <span class="ot">&lt;-</span> <span class="fu">colnames</span>(scmat)[Matrix<span class="sc">::</span><span class="fu">colSums</span>(scmat <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">&gt;=</span> <span class="dv">200</span>]</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>filt_mat <span class="ot">&lt;-</span> scmat[, cell_barcodes]</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize the SoupChannel</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">SoupChannel</span>(scmat, filt_mat)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform temporary clustering to identify cell-type specific markers for background estimation</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Running temporary clustering for SoupX marker identification...</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Running temporary clustering for SoupX marker identification...</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>sobj_temp <span class="ot">&lt;-</span> <span class="fu">CreateSeuratObject</span>(<span class="at">counts =</span> filt_mat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Feature names cannot have underscores ('_'), replacing with dashes
+('-')</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sobj_temp <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(sobj_temp, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>sobj_temp <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(sobj_temp, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>sobj_temp <span class="ot">&lt;-</span> <span class="fu">ScaleData</span>(sobj_temp, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>sobj_temp <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(sobj_temp, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>sobj_temp <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(sobj_temp, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>sobj_temp <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(sobj_temp, <span class="at">resolution =</span> <span class="fl">0.5</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">setClusters</span>(sc, <span class="fu">setNames</span>(sobj_temp<span class="sc">$</span>seurat_clusters, <span class="fu">colnames</span>(sobj_temp)))</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimate the ambient RNA contamination fraction (rho)</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">autoEstCont</span>(sc, </span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>                  <span class="at">tfidfMin =</span> <span class="fl">1.0</span>, </span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>                  <span class="at">soupQuantile =</span> <span class="fl">0.90</span>, </span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>                  <span class="at">priorRho =</span> <span class="fl">0.05</span>, </span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>                  <span class="at">priorRhoStdDev =</span> <span class="fl">0.1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>9776 genes passed tf-idf cut-off and 3408 soup quantile filter.  Taking the top 100.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using 835 independent estimates of rho.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Estimated global rho of 0.07</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>soupx_rho <span class="ot">&lt;-</span> sc<span class="sc">$</span>fit<span class="sc">$</span>rhoEst</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Reset the seed before the stochastic rounding of the corrected counts</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(the.seed)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate the corrected count matrix (integer format for downstream compatibility)</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>adj_matrix <span class="ot">&lt;-</span> <span class="fu">adjustCounts</span>(sc, <span class="at">roundToInt =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in sparseMatrix(i = out@i[w] + 1, j = out@j[w] + 1, x = out@x[w], :
+'giveCsparse' is deprecated; setting repr="T" for you</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Expanding counts from 18 clusters to 10306 cells.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Diagnostic Block: Assess overall ambient RNA removal ---</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>removed_counts <span class="ot">&lt;-</span> filt_mat <span class="sc">-</span> adj_matrix</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Calculate global impact</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>total_original <span class="ot">&lt;-</span> <span class="fu">sum</span>(filt_mat)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>total_removed <span class="ot">&lt;-</span> <span class="fu">sum</span>(removed_counts)</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>pct_removed <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> total_removed <span class="sc">/</span> total_original, <span class="dv">2</span>)</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"--- SoupX Correction Summary ---</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>--- SoupX Correction Summary ---</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Total ambient UMIs removed:"</span>, total_removed, <span class="fu">sprintf</span>(<span class="st">"(%s%% of entire dataset)</span><span class="sc">\n</span><span class="st">"</span>, pct_removed))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Total ambient UMIs removed: 2238384 (7.51% of entire dataset)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Identify the genes that formed the majority of the "soup"</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>top_soup_genes <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">sort</span>(Matrix<span class="sc">::</span><span class="fu">rowSums</span>(removed_counts), <span class="at">decreasing =</span> <span class="cn">TRUE</span>), <span class="dv">10</span>)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Top 10 genes most affected by ambient RNA removal:</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Top 10 genes most affected by ambient RNA removal:</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(top_soup_genes)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   MBP   GFAP    CLU TMSB4X MT-CO3 MT-CO1 MT-ND6   APOE   SPP1 MT-CO2 
+ 35548  28805  16565  12301  11935  11244   9904   9374   8131   8066 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize the final Seurat object with the cleaned matrix</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">CreateSeuratObject</span>(<span class="at">counts =</span> adj_matrix, </span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>                           <span class="at">project =</span> sample.name, </span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>                           <span class="at">min.cells =</span> <span class="dv">5</span>, </span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>                           <span class="at">min.features =</span> <span class="dv">200</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Feature names cannot have underscores ('_'), replacing with dashes
+('-')</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>n_initial_cells <span class="ot">&lt;-</span> <span class="fu">ncol</span>(sobj)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>n_retained_genes <span class="ot">&lt;-</span> <span class="fu">nrow</span>(sobj)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">SoupX Correction Complete. Initial candidate barcodes:"</span>, n_initial_cells, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+SoupX Correction Complete. Initial candidate barcodes: 10141 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Free memory </span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(sobj_temp, sc, filt_mat, scmat, removed_counts)</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           used  (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells 12045860 643.4   19554357 1044.4  19554357 1044.4
+Vcells 63981566 488.2  316489651 2414.7 393975677 3005.8</code></pre>
+</div>
+</div>
+<p>The initial object contained 10,141 candidate barcodes and 18,985 genes.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspect the metadata generated by Seurat</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(sobj<span class="sc">@</span>meta.data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                            orig.ident nCount_RNA nFeature_RNA
+AAACAAGCAAGCTATGAGTAGGCT-1 Brain_DV200        239          220
+AAACAAGCACAATGGCAGTAGGCT-1 Brain_DV200       2595         1480
+AAACAAGCACTAACAGAGTAGGCT-1 Brain_DV200        399          309
+AAACAAGCATGGCTTTAGTAGGCT-1 Brain_DV200       3124         2161
+AAACAAGCATTTGCTAAGTAGGCT-1 Brain_DV200       2514         1752
+AAACCAATCATCAAGAAGTAGGCT-1 Brain_DV200        840          620</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspect a small portion of the count matrix using the public accessor</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="fu">GetAssayData</span>(sobj,<span class="at">assay =</span> <span class="st">"RNA"</span>,<span class="at">layer =</span> <span class="st">"counts"</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>5 x 5 sparse Matrix of class "dgCMatrix"
+        AAACAAGCAAGCTATGAGTAGGCT-1 AAACAAGCACAATGGCAGTAGGCT-1
+OR4F5                            .                          .
+SAMD11                           .                          .
+NOC2L                            .                          1
+KLHL17                           .                          .
+PLEKHN1                          .                          .
+        AAACAAGCACTAACAGAGTAGGCT-1 AAACAAGCATGGCTTTAGTAGGCT-1
+OR4F5                            .                          .
+SAMD11                           .                          .
+NOC2L                            .                          .
+KLHL17                           .                          .
+PLEKHN1                          .                          .
+        AAACAAGCATTTGCTAAGTAGGCT-1
+OR4F5                            .
+SAMD11                           .
+NOC2L                            .
+KLHL17                           .
+PLEKHN1                          .</code></pre>
+</div>
+</div>
+<p>The raw matrix and the barcode-rank table were no longer required after creation of the Seurat object.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove large intermediate objects to release memory</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(nb_umi_by_barcode, scmat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in rm(nb_umi_by_barcode, scmat): object 'scmat' not found</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           used  (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells 12051635 643.7   19554357 1044.4  19554357 1044.4
+Vcells 63988673 488.2  253191721 1931.7 393975677 3005.8</code></pre>
+</div>
+</div>
+</section>
+<section id="gene-complexity-assessment" class="level2">
+<h2 class="anchored" data-anchor-id="gene-complexity-assessment">Gene complexity assessment</h2>
+<p>The number of detected genes per barcode was used to identify droplets with insufficient transcriptional complexity. Low complexity barcodes may represent empty droplets, cell debris or severely damaged cells.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Summarise the number of genes detected per candidate barcode</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sobj<span class="sc">$</span>nFeature_RNA)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    200     324     619    1222    1604   12645 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualise the distribution of detected genes</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(sobj<span class="sc">$</span>nFeature_RNA,<span class="at">breaks =</span> <span class="dv">200</span>,<span class="at">xlab =</span> <span class="st">"Number of detected genes"</span>,</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Detected genes per barcode"</span>)</span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sobj,<span class="at">features =</span> <span class="st">"nFeature_RNA"</span>,<span class="at">pt.size =</span> <span class="fl">0.01</span>) <span class="sc">+</span> </span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">800</span>,<span class="at">colour =</span> <span class="st">"red"</span>,<span class="at">linetype =</span> <span class="st">"dashed"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Default search for "data" layer in "RNA" assay yielded no results;
+utilizing "counts" layer instead.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The distribution contained a large population of low-complexity barcodes. A minimum threshold of 800 detected genes was selected from the observed distribution.</p>
+<p>No upper gene-count threshold was applied at this stage. Brain and tumour cells can exhibit high transcriptional complexity, and an arbitrary upper cut-off could remove genuine biological populations. Potential multiplets were evaluated later using <code>scDblFinder</code>.</p>
+</section>
+<section id="umi-count-assessment" class="level2">
+<h2 class="anchored" data-anchor-id="umi-count-assessment">UMI-count assessment</h2>
+<p>The total UMI count per barcode provides an additional measure of RNA content. Barcodes with very low UMI counts are less likely to contain intact, transcriptionally informative cells.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Summarise the total number of UMIs per candidate barcode</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sobj<span class="sc">$</span>nCount_RNA)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    208     409     829    2716    2461  298375 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualise the UMI-count distribution on linear and logarithmic scales</span></span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sobj,<span class="at">features =</span> <span class="st">"nCount_RNA"</span>,<span class="at">pt.size =</span> <span class="fl">0.01</span>) <span class="sc">+</span></span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">1000</span>,<span class="at">colour =</span> <span class="st">"green"</span>,<span class="at">linetype =</span> <span class="st">"dashed"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Default search for "data" layer in "RNA" assay yielded no results;
+utilizing "counts" layer instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sobj,<span class="at">features =</span> <span class="st">"nCount_RNA"</span>,<span class="at">log =</span> <span class="cn">TRUE</span>,<span class="at">pt.size =</span> <span class="fl">0.01</span>) <span class="sc">+</span></span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">1000</span>,<span class="at">colour =</span> <span class="st">"green"</span>,<span class="at">linetype =</span> <span class="st">"dashed"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Default search for "data" layer in "RNA" assay yielded no results;
+utilizing "counts" layer instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-12-2.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The relationship between the number of detected genes and the total UMI count was examined to identify the main complexity trend and potential extreme observations.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the correlation between gene and UMI counts</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>gene_umi_correlation <span class="ot">&lt;-</span> <span class="fu">cor</span>(sobj<span class="sc">$</span>nFeature_RNA,sobj<span class="sc">$</span>nCount_RNA,<span class="at">method =</span> <span class="st">"pearson"</span>)</span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>gene_umi_correlation</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.7524531</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">FeatureScatter</span>(sobj,<span class="at">feature1 =</span> <span class="st">"nCount_RNA"</span>,<span class="at">feature2 =</span> <span class="st">"nFeature_RNA"</span>,<span class="at">pt.size =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Gene–UMI relationship (Pearson r = "</span>,<span class="fu">round</span>(gene_umi_correlation, <span class="dv">2</span>),</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>      <span class="st">")"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The two metrics were positively correlated, as expected for droplets containing increasing amounts of cellular RNA. A minimum threshold of 1,000 UMIs was selected.</p>
+</section>
+<section id="filtering-low-complexity-barcodes" class="level2">
+<h2 class="anchored" data-anchor-id="filtering-low-complexity-barcodes">Filtering low-complexity barcodes</h2>
+<p>Barcodes were retained when they contained more than 800 detected genes and more than 1,000 UMIs.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the empirical lower thresholds</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>minGenes <span class="ot">&lt;-</span> <span class="dv">800</span></span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>minUmi <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Retain barcodes satisfying both complexity criteria</span></span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>sobjFiltrd <span class="ot">&lt;-</span> <span class="fu">subset</span>(sobj,<span class="at">subset =</span> nFeature_RNA <span class="sc">&gt;</span> minGenes <span class="sc">&amp;</span>nCount_RNA <span class="sc">&gt;</span> minUmi)</span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Record the number of candidate cells after gene and UMI filtering</span></span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a>n_after_complexity <span class="ot">&lt;-</span> <span class="fu">ncol</span>(sobjFiltrd)</span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Cells after gene and UMI filtering:"</span>,n_after_complexity,<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Cells after gene and UMI filtering: 4251 </code></pre>
+</div>
+</div>
+<p>The joint gene and UMI filtering retained 4,251 candidate cells.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspect the distributions after complexity filtering</span></span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sobjFiltrd,<span class="at">features =</span> <span class="fu">c</span>(<span class="st">"nFeature_RNA"</span>,<span class="st">"nCount_RNA"</span>),<span class="at">ncol =</span> <span class="dv">2</span>,<span class="at">pt.size =</span> <span class="fl">0.01</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Default search for "data" layer in "RNA" assay yielded no results;
+utilizing "counts" layer instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="fu">FeatureScatter</span>(sobjFiltrd,<span class="at">feature1 =</span> <span class="st">"nCount_RNA"</span>,<span class="at">feature2 =</span> <span class="st">"nFeature_RNA"</span>,<span class="at">pt.size =</span> <span class="fl">0.1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-16-2.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The unfiltered Seurat object was removed after the complexity-filtering step.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the initial object to reduce memory usage</span></span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(sobj)</span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           used  (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells 11766964 628.5   19554358 1044.4  19554358 1044.4
+Vcells 57775306 440.8  202553377 1545.4 393975677 3005.8</code></pre>
+</div>
+</div>
+</section>
+<section id="mitochondrial-transcript-assessment" class="level2">
+<h2 class="anchored" data-anchor-id="mitochondrial-transcript-assessment">Mitochondrial transcript assessment</h2>
+<p>The proportion of mitochondrial transcripts was calculated using genes beginning with <code>MT-</code>. An increased mitochondrial proportion can indicate damaged or dying cells, although the expected distribution depends on the tissue-processing and sequencing protocol.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the percentage of mitochondrial transcripts in each cell</span></span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>sobjFiltrd<span class="sc">$</span>percent_mt <span class="ot">&lt;-</span> <span class="fu">PercentageFeatureSet</span>(sobjFiltrd,<span class="at">pattern =</span> <span class="st">"^MT-"</span>)</span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Summarise the mitochondrial percentage</span></span>
+<span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sobjFiltrd<span class="sc">$</span>percent_mt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.1854  0.6103  1.7293  2.1433 39.5145 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualise the mitochondrial-percentage distribution</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sobjFiltrd,<span class="at">features =</span> <span class="st">"percent_mt"</span>,<span class="at">pt.size =</span> <span class="fl">0.01</span>) <span class="sc">+</span></span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">10</span>,<span class="at">colour =</span> <span class="st">"red"</span>,<span class="at">linetype =</span> <span class="st">"dashed"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Default search for "data" layer in "RNA" assay yielded no results;
+utilizing "counts" layer instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="1344"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(sobjFiltrd<span class="sc">@</span>meta.data,<span class="fu">aes</span>(<span class="at">x =</span> percent_mt)) <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">100</span>,<span class="at">colour =</span> <span class="st">"black"</span>,</span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> <span class="st">"grey70"</span>) <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">10</span>,<span class="at">colour =</span> <span class="st">"red"</span>,<span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Mitochondrial transcript percentage"</span>,<span class="at">x =</span> <span class="st">"Mitochondrial transcripts (%)"</span>,</span>
+<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Number of cells"</span>) <span class="sc">+</span><span class="fu">theme_classic</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-19-2.png" class="img-fluid figure-img" width="1344"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The relationship between mitochondrial percentage and total UMI count was examined to assess whether mitochondria-enriched cells also tended to have reduced RNA content.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the correlation between mitochondrial percentage and UMI count</span></span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>mito_umi_correlation <span class="ot">&lt;-</span> <span class="fu">cor</span>(sobjFiltrd<span class="sc">$</span>percent_mt,sobjFiltrd<span class="sc">$</span>nCount_RNA,<span class="at">method =</span> <span class="st">"pearson"</span>)</span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>mito_umi_correlation</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] -0.1239063</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="fu">FeatureScatter</span>(sobjFiltrd,<span class="at">feature1 =</span> <span class="st">"nCount_RNA"</span>,<span class="at">feature2 =</span> <span class="st">"percent_mt"</span>,<span class="at">pt.size =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Mitochondrial content and UMI count (Pearson r = "</span>,</span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>                      <span class="fu">round</span>(mito_umi_correlation, <span class="dv">2</span>),<span class="st">")"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Most candidate cells had low mitochondrial percentages. A maximum threshold of 10% was selected according to the observed distribution and the FFPE probe-based nature of the dataset.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the maximum mitochondrial-percentage threshold</span></span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>maxpct_mt <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove cells with elevated mitochondrial transcript proportions</span></span>
+<span id="cb75-5"><a href="#cb75-5" aria-hidden="true" tabindex="-1"></a>sobjFiltrd <span class="ot">&lt;-</span> <span class="fu">subset</span>(sobjFiltrd,<span class="at">subset =</span> percent_mt <span class="sc">&lt;</span> maxpct_mt)</span>
+<span id="cb75-6"><a href="#cb75-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-7"><a href="#cb75-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Record the number of cells after mitochondrial filtering</span></span>
+<span id="cb75-8"><a href="#cb75-8" aria-hidden="true" tabindex="-1"></a>n_after_mito <span class="ot">&lt;-</span> <span class="fu">ncol</span>(sobjFiltrd)</span>
+<span id="cb75-9"><a href="#cb75-9" aria-hidden="true" tabindex="-1"></a>n_removed_mito <span class="ot">&lt;-</span> n_after_complexity <span class="sc">-</span> n_after_mito</span>
+<span id="cb75-10"><a href="#cb75-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-11"><a href="#cb75-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Cells after mitochondrial filtering:"</span>,n_after_mito,<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Cells after mitochondrial filtering: 4172 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Cells removed by mitochondrial filtering:"</span>,n_removed_mito,<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Cells removed by mitochondrial filtering: 79 </code></pre>
+</div>
+</div>
+<p>The mitochondrial filter retained 4,172 cells and removed 79 cells.</p>
+</section>
+<section id="doublet-detection" class="level2">
+<h2 class="anchored" data-anchor-id="doublet-detection">Doublet detection</h2>
+<p>Droplets containing two or more cells can generate hybrid transcriptional profiles and artificial connections between otherwise distinct populations. Doublets were identified using <code>scDblFinder</code>.</p>
+<p>The Seurat object was temporarily converted into a <code>SingleCellExperiment</code>, which is the input format expected by <code>scDblFinder</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert the Seurat object into a SingleCellExperiment</span></span>
+<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a>sceobj <span class="ot">&lt;-</span> <span class="fu">as.SingleCellExperiment</span>(sobjFiltrd)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Layer 'data' is empty</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Layer 'scale.data' is empty</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reset the seed before the stochastic doublet-detection step</span></span>
+<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(the.seed)</span>
+<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-4"><a href="#cb82-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Detect putative doublets</span></span>
+<span id="cb82-5"><a href="#cb82-5" aria-hidden="true" tabindex="-1"></a>doublet_res <span class="ot">&lt;-</span> <span class="fu">scDblFinder</span>(sceobj)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Creating ~3338 artificial doublets...</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Dimensional reduction</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Evaluating kNN...</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Training model...</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>iter=0, 501 cells excluded from training.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in check.deprecation(deprecated_cv_params, match.call(), ...): Passed
+invalid function arguments: max_depth, eval_metric, tree_method, subsample,
+nthread, eta. These should be passed as a list to argument 'params'. Conversion
+from argument to 'params' entry will be done automatically, but this behavior
+will become an error in a future version.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in throw_err_or_depr_msg("Parameter(s) have been removed from this
+function: ", : Parameter(s) have been removed from this function: label. This
+warning will become an error in a future version.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>iter=1, 501 cells excluded from training.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in check.deprecation(deprecated_cv_params, match.call(), ...): Passed
+invalid function arguments: max_depth, eval_metric, tree_method, subsample,
+nthread, eta. These should be passed as a list to argument 'params'. Conversion
+from argument to 'params' entry will be done automatically, but this behavior
+will become an error in a future version.
+Warning in check.deprecation(deprecated_cv_params, match.call(), ...):
+Parameter(s) have been removed from this function: label. This warning will
+become an error in a future version.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>iter=2, 501 cells excluded from training.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in check.deprecation(deprecated_cv_params, match.call(), ...): Passed
+invalid function arguments: max_depth, eval_metric, tree_method, subsample,
+nthread, eta. These should be passed as a list to argument 'params'. Conversion
+from argument to 'params' entry will be done automatically, but this behavior
+will become an error in a future version.
+Warning in check.deprecation(deprecated_cv_params, match.call(), ...):
+Parameter(s) have been removed from this function: label. This warning will
+become an error in a future version.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Threshold found:0.426</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>260 (6.2%) doublets called</code></pre>
+</div>
+</div>
+<p>The predicted doublet classifications were transferred back to the Seurat metadata.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb96"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Store the doublet classifications in the Seurat object</span></span>
+<span id="cb96-2"><a href="#cb96-2" aria-hidden="true" tabindex="-1"></a>sobjFiltrd<span class="sc">$</span>doublets.class <span class="ot">&lt;-</span> doublet_res<span class="sc">$</span>scDblFinder.class</span>
+<span id="cb96-3"><a href="#cb96-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb96-4"><a href="#cb96-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the number and proportion of predicted singlets and doublets</span></span>
+<span id="cb96-5"><a href="#cb96-5" aria-hidden="true" tabindex="-1"></a>doublet_table <span class="ot">&lt;-</span> <span class="fu">table</span>(sobjFiltrd<span class="sc">$</span>doublets.class)</span>
+<span id="cb96-6"><a href="#cb96-6" aria-hidden="true" tabindex="-1"></a>doublet_proportions <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">prop.table</span>(doublet_table),<span class="dv">1</span>)</span>
+<span id="cb96-7"><a href="#cb96-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb96-8"><a href="#cb96-8" aria-hidden="true" tabindex="-1"></a>doublet_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+singlet doublet 
+   3912     260 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb98"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a>doublet_proportions</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+singlet doublet 
+   93.8     6.2 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb100"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Record the number of predicted doublets</span></span>
+<span id="cb100-2"><a href="#cb100-2" aria-hidden="true" tabindex="-1"></a>n_doublets <span class="ot">&lt;-</span> <span class="fu">sum</span>(sobjFiltrd<span class="sc">$</span>doublets.class <span class="sc">==</span> <span class="st">"doublet"</span>)</span>
+<span id="cb100-3"><a href="#cb100-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb100-4"><a href="#cb100-4" aria-hidden="true" tabindex="-1"></a>doublet_percentage <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> n_doublets <span class="sc">/</span> <span class="fu">ncol</span>(sobjFiltrd),<span class="dv">1</span>)</span>
+<span id="cb100-5"><a href="#cb100-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb100-6"><a href="#cb100-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Predicted doublets:"</span>, n_doublets, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Predicted doublets: 260 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb102"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb102-1"><a href="#cb102-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Predicted doublet percentage:"</span>, doublet_percentage, <span class="st">"%</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Predicted doublet percentage: 6.2 %</code></pre>
+</div>
+</div>
+<p>Predicted doublets were removed before dimensionality reduction and clustering.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb104"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb104-1"><a href="#cb104-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Retain only cells classified as singlets</span></span>
+<span id="cb104-2"><a href="#cb104-2" aria-hidden="true" tabindex="-1"></a>sobjFiltrd <span class="ot">&lt;-</span> <span class="fu">subset</span>(sobjFiltrd,<span class="at">subset =</span> doublets.class <span class="sc">==</span> <span class="st">"singlet"</span>)</span>
+<span id="cb104-3"><a href="#cb104-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb104-4"><a href="#cb104-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Record the final number of retained cells</span></span>
+<span id="cb104-5"><a href="#cb104-5" aria-hidden="true" tabindex="-1"></a>n_final_cells <span class="ot">&lt;-</span> <span class="fu">ncol</span>(sobjFiltrd)</span>
+<span id="cb104-6"><a href="#cb104-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb104-7"><a href="#cb104-7" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Final number of singlets:"</span>,n_final_cells,<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Final number of singlets: 3912 </code></pre>
+</div>
+</div>
+<p>The intermediate <code>SingleCellExperiment</code> objects were removed after doublet detection</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb106"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb106-1"><a href="#cb106-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove intermediate doublet-detection objects</span></span>
+<span id="cb106-2"><a href="#cb106-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(sceobj, doublet_res)</span>
+<span id="cb106-3"><a href="#cb106-3" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           used  (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells 11843774 632.6   19554358 1044.4  19554358 1044.4
+Vcells 62904300 480.0  202553377 1545.4 393975677 3005.8</code></pre>
+</div>
+</div>
+</section>
+<section id="final-quality-control-assessment" class="level2">
+<h2 class="anchored" data-anchor-id="final-quality-control-assessment">Final quality-control assessment</h2>
+<p>The final distributions of detected genes, UMI counts and mitochondrial percentage were inspected after all filtering steps.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb108"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb108-1"><a href="#cb108-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Display summary statistics for the final dataset</span></span>
+<span id="cb108-2"><a href="#cb108-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sobjFiltrd<span class="sc">$</span>nFeature_RNA)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    801    1193    1788    2241    2688   11906 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb110"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb110-1"><a href="#cb110-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sobjFiltrd<span class="sc">$</span>nCount_RNA)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1002    1725    2804    5196    5084  193012 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb112"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb112-1"><a href="#cb112-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sobjFiltrd<span class="sc">$</span>percent_mt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.1668  0.5396  1.4774  2.0017  9.9266 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb114"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb114-1"><a href="#cb114-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualise the final QC distributions</span></span>
+<span id="cb114-2"><a href="#cb114-2" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sobjFiltrd,<span class="at">features =</span> <span class="fu">c</span>(<span class="st">"nFeature_RNA"</span>,<span class="st">"nCount_RNA"</span>,<span class="st">"percent_mt"</span>),<span class="at">ncol =</span> <span class="dv">3</span>,</span>
+<span id="cb114-3"><a href="#cb114-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">pt.size =</span> <span class="fl">0.01</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Default search for "data" layer in "RNA" assay yielded no results;
+utilizing "counts" layer instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_1_QC_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid figure-img" width="1344"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>A summary table was generated to document the number of barcodes or cells retained at each step of the workflow.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb116"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb116-1"><a href="#cb116-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Summarise the number of barcodes or cells retained after each QC step</span></span>
+<span id="cb116-2"><a href="#cb116-2" aria-hidden="true" tabindex="-1"></a>qc_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">step =</span> <span class="fu">c</span>(<span class="st">"Raw barcodes"</span>,<span class="st">"Initial Seurat filtering"</span>,</span>
+<span id="cb116-3"><a href="#cb116-3" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">"Gene and UMI filtering"</span>,<span class="st">"Mitochondrial filtering"</span>,</span>
+<span id="cb116-4"><a href="#cb116-4" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">"Doublet removal"</span>),</span>
+<span id="cb116-5"><a href="#cb116-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">retained_barcodes_or_cells =</span> <span class="fu">c</span>(n_raw_barcodes,n_initial_cells,</span>
+<span id="cb116-6"><a href="#cb116-6" aria-hidden="true" tabindex="-1"></a>                                                        n_after_complexity,</span>
+<span id="cb116-7"><a href="#cb116-7" aria-hidden="true" tabindex="-1"></a>                                                        n_after_mito,n_final_cells))</span>
+<span id="cb116-8"><a href="#cb116-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb116-9"><a href="#cb116-9" aria-hidden="true" tabindex="-1"></a>qc_summary</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                      step retained_barcodes_or_cells
+1             Raw barcodes                     392837
+2 Initial Seurat filtering                      10141
+3   Gene and UMI filtering                       4251
+4  Mitochondrial filtering                       4172
+5          Doublet removal                       3912</code></pre>
+</div>
+</div>
+<p>The final dataset contained 3,912 predicted singlets and 18,985 retained genes. These cells passed the gene-complexity, UMI-count and mitochondrial-content filters and were not classified as doublets.</p>
+</section>
+<section id="normalisation" class="level2">
+<h2 class="anchored" data-anchor-id="normalisation">Normalisation</h2>
+<p>The retained count matrix was normalised using Seurat’s <code>LogNormalize</code> method. For each cell, gene counts were divided by the total cellular count, multiplied by the default scale factor of 10,000 and log-transformed.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb118"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb118-1"><a href="#cb118-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalise gene expression while preserving the raw counts</span></span>
+<span id="cb118-2"><a href="#cb118-2" aria-hidden="true" tabindex="-1"></a>sobjFiltrd <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(<span class="at">object =</span> sobjFiltrd,<span class="at">normalization.method =</span> <span class="st">"LogNormalize"</span>,</span>
+<span id="cb118-3"><a href="#cb118-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">scale.factor =</span> <span class="dv">10000</span>,<span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Raw counts remained available in the <code>counts</code> layer, while the normalised expression values were stored in the <code>data</code> layer. We can also perform SCTransform, but this method does require some computational ressources since it uses GLMs to adjust residus</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb119"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb119-1"><a href="#cb119-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify the RNA layers present after normalisation</span></span>
+<span id="cb119-2"><a href="#cb119-2" aria-hidden="true" tabindex="-1"></a><span class="fu">Layers</span>(sobjFiltrd[[<span class="st">"RNA"</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "counts" "data"  </code></pre>
+</div>
+</div>
+</section>
+<section id="saving-the-filtered-object" class="level2">
+<h2 class="anchored" data-anchor-id="saving-the-filtered-object">Saving the filtered object</h2>
+<p>The filtered and normalised Seurat object was saved for the dimensionality-reduction, clustering and annotation analyses.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb121"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb121-1"><a href="#cb121-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Store the QC summary with the object for the joint analysis</span></span>
+<span id="cb121-2"><a href="#cb121-2" aria-hidden="true" tabindex="-1"></a><span class="fu">Misc</span>(sobjFiltrd, <span class="at">slot =</span> <span class="st">"qc_funnel"</span>) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">candidates =</span> n_initial_cells,</span>
+<span id="cb121-3"><a href="#cb121-3" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">after_complexity =</span> n_after_complexity,</span>
+<span id="cb121-4"><a href="#cb121-4" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">after_mito =</span> n_after_mito,</span>
+<span id="cb121-5"><a href="#cb121-5" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">final =</span> n_final_cells)</span>
+<span id="cb121-6"><a href="#cb121-6" aria-hidden="true" tabindex="-1"></a><span class="fu">Misc</span>(sobjFiltrd, <span class="at">slot =</span> <span class="st">"soupx"</span>) <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">rho =</span> soupx_rho,</span>
+<span id="cb121-7"><a href="#cb121-7" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">pct_removed =</span> pct_removed,</span>
+<span id="cb121-8"><a href="#cb121-8" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">top_genes =</span> <span class="fu">names</span>(top_soup_genes))</span>
+<span id="cb121-9"><a href="#cb121-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb121-10"><a href="#cb121-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the output path</span></span>
+<span id="cb121-11"><a href="#cb121-11" aria-hidden="true" tabindex="-1"></a>filtered_output_file <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"../data/processed_data/"</span>,sample.name,<span class="st">"_FILTERED.rda"</span>)</span>
+<span id="cb121-12"><a href="#cb121-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb121-13"><a href="#cb121-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the filtered and normalised Seurat object</span></span>
+<span id="cb121-14"><a href="#cb121-14" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(sobjFiltrd,<span class="at">file =</span> filtered_output_file)</span>
+<span id="cb121-15"><a href="#cb121-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb121-16"><a href="#cb121-16" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Filtered object saved to:"</span>,filtered_output_file,<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Filtered object saved to: ../data/processed_data/Brain_DV200_FILTERED.rda </code></pre>
+</div>
+</div>
+<p>The saved object is subsequently loaded by the clustering script.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb123"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Record the software versions used in the analysis</span></span>
+<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.4.3 (2025-02-28 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+
+
+locale:
+[1] LC_COLLATE=English_United States.utf8 
+[2] LC_CTYPE=English_United States.utf8   
+[3] LC_MONETARY=English_United States.utf8
+[4] LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Europe/Berlin
+tzcode source: internal
+
+attached base packages:
+[1] stats4    stats     graphics  grDevices utils     datasets  methods  
+[8] base     
+
+other attached packages:
+ [1] future_1.82.0               SoupX_1.6.2                
+ [3] scDblFinder_1.20.2          SingleCellExperiment_1.28.1
+ [5] SummarizedExperiment_1.36.0 Biobase_2.66.0             
+ [7] GenomicRanges_1.58.0        GenomeInfoDb_1.42.3        
+ [9] IRanges_2.40.1              S4Vectors_0.44.0           
+[11] BiocGenerics_0.52.0         MatrixGenerics_1.18.1      
+[13] matrixStats_1.5.0           ggplot2_4.0.3              
+[15] dplyr_1.2.1                 Seurat_5.5.0               
+[17] SeuratObject_5.4.0          sp_2.2-0                   
+
+loaded via a namespace (and not attached):
+  [1] RcppAnnoy_0.0.23         splines_4.4.3            later_1.4.8             
+  [4] BiocIO_1.16.0            bitops_1.0-9             R.oo_1.27.1             
+  [7] tibble_3.2.1             polyclip_1.10-7          XML_3.99-0.23           
+ [10] fastDummies_1.7.6        lifecycle_1.0.5          edgeR_4.4.2             
+ [13] globals_0.20.0           lattice_0.22-6           MASS_7.3-64             
+ [16] magrittr_2.0.3           limma_3.62.2             plotly_4.12.1           
+ [19] rmarkdown_2.32           yaml_2.3.12              metapod_1.14.0          
+ [22] httpuv_1.6.17            otel_0.3.0               sctransform_0.4.3       
+ [25] spam_2.11-3              spatstat.sparse_3.1-0    reticulate_1.46.0       
+ [28] cowplot_1.2.0            pbapply_1.7-5            RColorBrewer_1.1-3      
+ [31] abind_1.4-8              zlibbioc_1.52.0          Rtsne_0.17              
+ [34] R.utils_2.13.0           purrr_1.2.2              RCurl_1.98-1.18         
+ [37] GenomeInfoDbData_1.2.13  ggrepel_0.9.8            irlba_2.3.7             
+ [40] listenv_1.1.0            spatstat.utils_3.2-2     goftest_1.2-3           
+ [43] RSpectra_0.16-2          spatstat.random_3.4-5    dqrng_0.4.1             
+ [46] fitdistrplus_1.2-6       parallelly_1.47.0        codetools_0.2-20        
+ [49] DelayedArray_0.32.0      scuttle_1.16.0           tidyselect_1.2.1        
+ [52] UCSC.utils_1.2.0         farver_2.1.2             ScaledMatrix_1.14.0     
+ [55] viridis_0.6.5            spatstat.explore_3.8-0   GenomicAlignments_1.42.0
+ [58] jsonlite_1.9.1           BiocNeighbors_2.0.1      progressr_1.1.0         
+ [61] ggridges_0.5.7           survival_3.8-3           scater_1.34.1           
+ [64] tools_4.4.3              ica_1.0-3                Rcpp_1.0.14             
+ [67] glue_1.8.0               gridExtra_2.3.1          SparseArray_1.6.2       
+ [70] xfun_0.57                withr_3.0.3              fastmap_1.2.0           
+ [73] bluster_1.16.0           digest_0.6.39            rsvd_2.0.0              
+ [76] R6_2.6.1                 mime_0.12                scattermore_1.2         
+ [79] tensor_1.5.1             spatstat.data_3.1-9      R.methodsS3_1.8.2       
+ [82] tidyr_1.3.2              generics_0.1.4           data.table_1.18.2.1     
+ [85] rtracklayer_1.66.0       httr_1.4.9               htmlwidgets_1.6.4       
+ [88] S4Arrays_1.6.0           uwot_0.2.4               pkgconfig_2.0.3         
+ [91] gtable_0.3.6             lmtest_0.9-40            S7_0.2.2                
+ [94] XVector_0.46.0           htmltools_0.5.9          dotCall64_1.2           
+ [97] scales_1.4.0             png_0.1-9                spatstat.univar_3.1-7   
+[100] scran_1.34.0             knitr_1.52               rstudioapi_0.19.0       
+[103] reshape2_1.4.5           rjson_0.2.23             nlme_3.1-167            
+[106] curl_7.1.0               zoo_1.8-15               stringr_1.6.0           
+[109] KernSmooth_2.23-26       parallel_4.4.3           miniUI_0.1.2            
+[112] vipor_0.4.7              ggrastr_1.0.2            restfulr_0.0.16         
+[115] pillar_1.11.1            grid_4.4.3               vctrs_0.7.3             
+[118] RANN_2.6.2               promises_1.5.0           BiocSingular_1.22.0     
+[121] beachmat_2.22.0          xtable_1.8-8             cluster_2.1.8           
+[124] beeswarm_0.4.0           evaluate_1.0.5           locfit_1.5-9.12         
+[127] cli_3.6.4                compiler_4.4.3           Rsamtools_2.22.0        
+[130] rlang_1.2.0              crayon_1.5.3             future.apply_1.21.0     
+[133] labeling_0.4.3           plyr_1.8.9               ggbeeswarm_0.7.3        
+[136] stringi_1.8.7            viridisLite_0.4.3        deldir_2.0-4            
+[139] BiocParallel_1.40.0      Biostrings_2.74.1        spatstat.geom_3.7-3     
+[142] Matrix_1.7-2             RcppHNSW_0.6.0           patchwork_1.3.2         
+[145] statmod_1.5.1            shiny_1.14.0             ROCR_1.0-12             
+[148] igraph_2.3.0             xgboost_3.2.1.1         </code></pre>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

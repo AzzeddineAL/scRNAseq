@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Glioblastoma scRNA-seq - Integration of the Manual and Octo Samples</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Glioblastoma_scRNAseq_Integration_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Glioblastoma_scRNAseq_Integration_files/libs/quarto-html/quarto.js"></script>
+<script src="Glioblastoma_scRNAseq_Integration_files/libs/quarto-html/popper.min.js"></script>
+<script src="Glioblastoma_scRNAseq_Integration_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Glioblastoma_scRNAseq_Integration_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Glioblastoma_scRNAseq_Integration_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Glioblastoma_scRNAseq_Integration_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Glioblastoma_scRNAseq_Integration_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Glioblastoma_scRNAseq_Integration_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Glioblastoma_scRNAseq_Integration_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Glioblastoma scRNA-seq - Integration of the Manual and Octo Samples</h1>
+<p class="subtitle lead">Glioblastoma FFPE Tissue Dissociated Manually or with the gentleMACS Octo Dissociator</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="integration-of-the-manual-and-octo-samples" class="level2">
+<h2 class="anchored" data-anchor-id="integration-of-the-manual-and-octo-samples">Integration of the Manual and Octo samples</h2>
+<section id="analysis-setup" class="level3">
+<h3 class="anchored" data-anchor-id="analysis-setup">Analysis setup</h3>
+<p>The two glioblastoma samples originate from the same donor and FFPE specimen and were processed with the same probe panel, in the same GEM lane and with the same Cell Ranger version. The dissociation method (manual or gentleMACS Octo) is therefore the only experimental difference between them, and the samples behave as two technical replicates of the same tumour.</p>
+<p>Integration is not always necessary. The samples were first processed jointly without integration. If the clusters separate cells by biology rather than by sample, integration is not required; if they separate cells by sample, the embeddings are aligned before the clustering is repeated. Several integration methods were then compared with metrics fixed in advance, and the unintegrated embedding was retained as a candidate. A difference in cell-type composition between the samples was documented before integration, because it may reflect the dissociation method and must not be removed by the correction.</p>
+<p>Integration corrects the low-dimensional embedding used for the neighbour graph, the clustering and the UMAP. It does not modify the expression values: scores, differential expression and cell-cell communication are computed on the normalised expression of the <code>RNA</code> assay.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the sample labels and the species</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>sample_labels <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Manual"</span>, <span class="st">"Octo"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>species <span class="ot">&lt;-</span> <span class="st">"Human"</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Set a fixed random seed for reproducibility</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>the.seed <span class="ot">&lt;-</span> <span class="dv">42</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(the.seed)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the packages required for the joint analysis</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Seurat)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(SeuratObject)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(dplyr)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(patchwork)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(harmony)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(cluster)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <code>harmony</code> package must be installed once.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"harmony"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The parameters of the joint analysis follow those of the Manual pipeline (2,000 variable genes, 20 principal components, clustering resolution of 0.2). The tolerances used to select the embedding were defined here, before any metric was computed.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Joint-analysis parameters, identical to those of the Manual pipeline</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>n_pcs <span class="ot">&lt;-</span> <span class="dv">20</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>n_hvg <span class="ot">&lt;-</span> <span class="dv">2000</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>cluster_res <span class="ot">&lt;-</span> <span class="fl">0.2</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Number of neighbours used for the LISI metrics</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>k_lisi <span class="ot">&lt;-</span> <span class="dv">90</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Selection rule: maximal loss of biological conservation tolerated, and</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># minimal gain in sample mixing required to prefer an integrated embedding</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>tol_bio <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>min_gain_mixing <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Format numbers consistently in the text</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>fmt <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">format</span>(x, <span class="at">big.mark =</span> <span class="st">","</span>, <span class="at">scientific =</span> <span class="cn">FALSE</span>, <span class="at">trim =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="utility-functions" class="level3">
+<h3 class="anchored" data-anchor-id="utility-functions">Utility functions</h3>
+<p>These functions summarise and visualise the distribution of the samples (or of the cell types) within clusters.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Count the cells of each group in each cluster and compute their frequencies</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>summarize_clusters_by_group <span class="ot">&lt;-</span> <span class="cf">function</span>(seurat_obj, cluster_column_name, batch_column_name) {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  seurat_obj[[]] <span class="sc">%&gt;%</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">count</span>(</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">cluster =</span> .data[[cluster_column_name]],</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">batch =</span> .data[[batch_column_name]],</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">name =</span> <span class="st">"cell_count"</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">group_by</span>(cluster) <span class="sc">%&gt;%</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">freq =</span> cell_count <span class="sc">/</span> <span class="fu">sum</span>(cell_count)) <span class="sc">%&gt;%</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">ungroup</span>()</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the number of cells per cluster, coloured by group</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>plot_cluster_sample <span class="ot">&lt;-</span> <span class="cf">function</span>(cluster_summary_df, overall_title) {</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(cluster_summary_df, <span class="fu">aes</span>(<span class="at">x =</span> cluster, <span class="at">y =</span> cell_count, <span class="at">fill =</span> batch)) <span class="sc">+</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">position =</span> <span class="st">"stack"</span>) <span class="sc">+</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Cluster"</span>, <span class="at">y =</span> <span class="st">"Number of cells"</span>, <span class="at">fill =</span> <span class="st">"Group"</span>) <span class="sc">+</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggtitle</span>(overall_title) <span class="sc">+</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the frequency of each group in each cluster</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>plot_cluster_freq <span class="ot">&lt;-</span> <span class="cf">function</span>(cluster_summary_df, overall_title) {</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(cluster_summary_df, <span class="fu">aes</span>(<span class="at">x =</span> cluster, <span class="at">y =</span> freq, <span class="at">fill =</span> batch)) <span class="sc">+</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">position =</span> <span class="st">"fill"</span>) <span class="sc">+</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Cluster"</span>, <span class="at">y =</span> <span class="st">"Group frequency"</span>, <span class="at">fill =</span> <span class="st">"Group"</span>) <span class="sc">+</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggtitle</span>(overall_title) <span class="sc">+</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_y_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span><span class="fu">percent_format</span>()) <span class="sc">+</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="loading-the-manual-and-octo-objects" class="level2">
+<h2 class="anchored" data-anchor-id="loading-the-manual-and-octo-objects">Loading the Manual and Octo objects</h2>
+<p>The filtered and normalised objects of the two samples were loaded into separate environments, because both are saved under the name <code>sobjFiltrd</code>. The annotated Manual object provides the cell-type labels.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load a saved Seurat object into a separate environment and return it</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>load_seurat <span class="ot">&lt;-</span> <span class="cf">function</span>(pattern) {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  f <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="st">"../data/processed_data"</span>, <span class="at">pattern =</span> pattern,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>                  <span class="at">ignore.case =</span> <span class="cn">TRUE</span>, <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">length</span>(f) <span class="sc">==</span> <span class="dv">1</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  e <span class="ot">&lt;-</span> <span class="fu">new.env</span>()</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">load</span>(f, <span class="at">envir =</span> e)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  e<span class="sc">$</span>sobjFiltrd</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>manual <span class="ot">&lt;-</span> <span class="fu">load_seurat</span>(<span class="st">"^brain_DV200_FILTERED</span><span class="sc">\\</span><span class="st">.rda$"</span>)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>manual_ann <span class="ot">&lt;-</span> <span class="fu">load_seurat</span>(<span class="st">"^brain_DV200_ANNOTATED</span><span class="sc">\\</span><span class="st">.rda$"</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>octo <span class="ot">&lt;-</span> <span class="fu">load_seurat</span>(<span class="st">"^brain_octo_FILTERED</span><span class="sc">\\</span><span class="st">.rda$"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The annotated Manual object must contain the same cells as the filtered Manual object, so that the labels correspond to the cells that are integrated.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify that the annotation corresponds to the current filtered Manual object</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">setequal</span>(<span class="fu">colnames</span>(manual), <span class="fu">colnames</span>(manual_ann))) {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">"The annotated and filtered Manual objects contain different cells: "</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>       <span class="st">"re-run the Manual pipeline from the QC document."</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Label the samples and the dissociation methods</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>manual<span class="sc">$</span>sample <span class="ot">&lt;-</span> <span class="st">"Manual"</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>manual<span class="sc">$</span>dissociation <span class="ot">&lt;-</span> <span class="st">"Manual"</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">sample =</span> <span class="fu">c</span>(<span class="st">"Manual"</span>, <span class="st">"Octo"</span>), <span class="at">cells =</span> <span class="fu">c</span>(<span class="fu">ncol</span>(manual), <span class="fu">ncol</span>(octo)),</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>           <span class="at">genes =</span> <span class="fu">c</span>(<span class="fu">nrow</span>(manual), <span class="fu">nrow</span>(octo)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  sample cells genes
+1 Manual  3912 18985
+2   Octo  3970 18886</code></pre>
+</div>
+</div>
+</section>
+<section id="annotation-of-the-octo-cells-by-label-transfer" class="level2">
+<h2 class="anchored" data-anchor-id="annotation-of-the-octo-cells-by-label-transfer">Annotation of the Octo cells by label transfer</h2>
+<p>The Manual cell types were transferred to the Octo cells through anchors computed in the principal-component space of the Manual object. The transfer is independent of the integration methods, so the same labels were used to evaluate all of them. The prediction score quantifies the confidence of each assignment.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set the default assay of both objects</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">DefaultAssay</span>(manual_ann) <span class="ot">&lt;-</span> <span class="st">"RNA"</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">DefaultAssay</span>(octo) <span class="ot">&lt;-</span> <span class="st">"RNA"</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Find the transfer anchors between the Manual reference and the Octo query</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>transfer_anchors <span class="ot">&lt;-</span> <span class="fu">FindTransferAnchors</span>(</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">reference =</span> manual_ann,</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">query =</span> octo,</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span>n_pcs,</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">reference.reduction =</span> <span class="st">"pca"</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">normalization.method =</span> <span class="st">"LogNormalize"</span>,</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Transfer the Manual cell types to the Octo cells</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>manual_labels <span class="ot">&lt;-</span> <span class="fu">setNames</span>(<span class="fu">as.character</span>(manual_ann<span class="sc">$</span>celltype), <span class="fu">colnames</span>(manual_ann))</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>transfer_pred <span class="ot">&lt;-</span> <span class="fu">TransferData</span>(</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">anchorset =</span> transfer_anchors,</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">refdata =</span> manual_labels,</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span>n_pcs,</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Store the predicted labels and their confidence in the Octo object</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>octo<span class="sc">$</span>celltype_transfer <span class="ot">&lt;-</span> transfer_pred<span class="sc">$</span>predicted.id</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>octo<span class="sc">$</span>transfer_score <span class="ot">&lt;-</span> transfer_pred<span class="sc">$</span>prediction.score.max</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Distribution of the prediction scores</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(octo<span class="sc">@</span>meta.data, <span class="fu">aes</span>(<span class="at">x =</span> transfer_score)) <span class="sc">+</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">50</span>, <span class="at">fill =</span> <span class="st">"grey70"</span>, <span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linewidth =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Confidence of the label transfer to the Octo cells"</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Maximal prediction score"</span>, <span class="at">y =</span> <span class="st">"Number of cells"</span>) <span class="sc">+</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Number of Octo cells and median confidence per transferred label</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>octo<span class="sc">@</span>meta.data <span class="sc">%&gt;%</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(celltype_transfer) <span class="sc">%&gt;%</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">cells =</span> <span class="fu">n</span>(), <span class="at">median_score =</span> <span class="fu">round</span>(<span class="fu">median</span>(transfer_score), <span class="dv">2</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(cells))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 12 × 3
+   celltype_transfer  cells median_score
+   &lt;chr&gt;              &lt;int&gt;        &lt;dbl&gt;
+ 1 Tumour MES-like     1041         1   
+ 2 Myeloid              651         1   
+ 3 Oligodendrocytes     488         1   
+ 4 Tumour NPC-like      436         1   
+ 5 Excitatory neurons   341         0.96
+ 6 OPC                  230         1   
+ 7 Vascular             197         1   
+ 8 Astrocytes           176         1   
+ 9 Unclear              145         1   
+10 T/NK cells           123         1   
+11 Inhibitory neurons    84         1   
+12 Unknown yet           58         1   </code></pre>
+</div>
+</div>
+<p>A total of 93.2% of the Octo cells were assigned with a prediction score of at least 0.8, and the median score was 1.</p>
+</section>
+<section id="merging-the-samples" class="level2">
+<h2 class="anchored" data-anchor-id="merging-the-samples">Merging the samples</h2>
+<p>The two objects were merged, the layers were joined and then split by sample, which is the layout required by <code>IntegrateLayers</code>. The Manual labels and the transferred Octo labels were stored in a single <code>celltype</code> column, and their origin was recorded.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge the two samples, prefixing the cell names with the sample label</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">merge</span>(manual, <span class="at">y =</span> octo, <span class="at">add.cell.ids =</span> sample_labels, <span class="at">project =</span> <span class="st">"GBM_Manual_Octo"</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Join the layers, then split them by sample</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">JoinLayers</span>(sobj)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>sobj[[<span class="st">"RNA"</span>]] <span class="ot">&lt;-</span> <span class="fu">split</span>(sobj[[<span class="st">"RNA"</span>]], <span class="at">f =</span> sobj<span class="sc">$</span>sample)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Splitting 'counts', 'data' layers. Not splitting . If you would like to split other layers, set in `layers` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Layers</span>(sobj[[<span class="st">"RNA"</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "data.Manual"   "data.Octo"     "counts.Manual" "counts.Octo"  </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine the Manual annotation and the Octo transferred labels</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>labels_manual <span class="ot">&lt;-</span> <span class="fu">setNames</span>(manual_labels, <span class="fu">paste0</span>(<span class="st">"Manual_"</span>, <span class="fu">names</span>(manual_labels)))</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>labels_octo <span class="ot">&lt;-</span> <span class="fu">setNames</span>(octo<span class="sc">$</span>celltype_transfer, <span class="fu">paste0</span>(<span class="st">"Octo_"</span>, <span class="fu">colnames</span>(octo)))</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>all_labels <span class="ot">&lt;-</span> <span class="fu">c</span>(labels_manual, labels_octo)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>sobj<span class="sc">$</span>celltype <span class="ot">&lt;-</span> <span class="fu">unname</span>(all_labels[<span class="fu">colnames</span>(sobj)])</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>sobj<span class="sc">$</span>label_source <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(sobj<span class="sc">$</span>sample <span class="sc">==</span> <span class="st">"Manual"</span>, <span class="st">"annotation"</span>, <span class="st">"transfer"</span>)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify that every cell has a label</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(sobj<span class="sc">$</span>celltype))</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sobj<span class="sc">$</span>sample, sobj<span class="sc">$</span>label_source)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        
+         annotation transfer
+  Manual       3912        0
+  Octo            0     3970</code></pre>
+</div>
+</div>
+<p>The merged object contained 7,882 cells (3,912 Manual and 3,970 Octo) and 19,000 genes.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the individual objects that are no longer needed</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(manual, octo, manual_ann, transfer_anchors, transfer_pred)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           used  (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells  4026001 215.1    6737985  359.9   6737985  359.9
+Vcells 65958440 503.3  260802348 1989.8 325286938 2481.8</code></pre>
+</div>
+</div>
+</section>
+<section id="composition-of-the-samples-before-integration" class="level2">
+<h2 class="anchored" data-anchor-id="composition-of-the-samples-before-integration">Composition of the samples before integration</h2>
+<p>The cell-type composition of each sample was documented before any correction. A difference in composition can reflect the dissociation method, which may recover some cell types more efficiently than others. Such a difference is a result in itself and is not a batch effect to be removed. The Octo composition relies on transferred labels and is provisional until the independent annotation of the comparison document.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Proportion of each cell type within each sample</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(sobj<span class="sc">@</span>meta.data, <span class="fu">aes</span>(<span class="at">x =</span> sample, <span class="at">fill =</span> celltype)) <span class="sc">+</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>) <span class="sc">+</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Sample"</span>, <span class="at">y =</span> <span class="st">"Proportion of cells"</span>, <span class="at">fill =</span> <span class="st">"Cell type"</span>) <span class="sc">+</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span><span class="fu">percent_format</span>()) <span class="sc">+</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Counts and percentages of cells per cell type and sample</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>composition_counts <span class="ot">&lt;-</span> <span class="fu">table</span>(sobj<span class="sc">$</span>celltype, sobj<span class="sc">$</span>sample)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>composition_pct <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">prop.table</span>(composition_counts, <span class="at">margin =</span> <span class="dv">2</span>), <span class="dv">1</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(composition_pct) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="fu">colnames</span>(composition_pct), <span class="st">" (%)"</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cbind</span>(<span class="fu">unclass</span>(composition_counts), <span class="fu">unclass</span>(composition_pct))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                   Manual Octo Manual (%) Octo (%)
+Astrocytes            128  176        3.3      4.4
+Excitatory neurons    600  341       15.3      8.6
+Inhibitory neurons    170   84        4.3      2.1
+Myeloid               535  651       13.7     16.4
+Oligodendrocytes      455  488       11.6     12.3
+OPC                   153  230        3.9      5.8
+T/NK cells             92  123        2.4      3.1
+Tumour MES-like       797 1041       20.4     26.2
+Tumour NPC-like       442  436       11.3     11.0
+Unclear               174  145        4.4      3.7
+Unknown yet            48   58        1.2      1.5
+Vascular              318  197        8.1      5.0</code></pre>
+</div>
+</div>
+</section>
+<section id="joint-processing-without-integration" class="level2">
+<h2 class="anchored" data-anchor-id="joint-processing-without-integration">Joint processing without integration</h2>
+<p>The joint processing followed the Manual pipeline: normalisation of each layer, selection of 2,000 variable genes, scaling and principal-component analysis. Variable genes were selected for each sample and combined across layers.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalise each layer independently</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(sobj, <span class="at">normalization.method =</span> <span class="st">"LogNormalize"</span>,</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>                      <span class="at">scale.factor =</span> <span class="dv">10000</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Select the variable genes across the two samples</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(sobj, <span class="at">selection.method =</span> <span class="st">"vst"</span>, <span class="at">nfeatures =</span> n_hvg,</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>                             <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Scale the variable genes of each layer</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">ScaleData</span>(sobj, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The number of principal components was inspected on the joint dataset, then fixed to the value used for the Manual sample.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute 50 principal components to inspect the elbow plot</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(sobj, <span class="at">npcs =</span> <span class="dv">50</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ElbowPlot</span>(sobj, <span class="at">ndims =</span> <span class="dv">50</span>) <span class="sc">+</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> n_pcs, <span class="at">colour =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Recompute the principal components retained for the integration and the clustering</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(sobj, <span class="at">npcs =</span> n_pcs, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Number of dimensions changing from 50 to 20</code></pre>
+</div>
+</div>
+<section id="clustering-and-batch-assessment-without-integration" class="level3">
+<h3 class="anchored" data-anchor-id="clustering-and-batch-assessment-without-integration">Clustering and batch assessment without integration</h3>
+<p>The clusters of the unintegrated embedding were examined with respect to the sample. The graph, the clusters and the UMAP of each embedding were computed by the same function, so that all methods are treated identically.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build the neighbour graph, the clusters and the UMAP of one embedding</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>cluster_embedding <span class="ot">&lt;-</span> <span class="cf">function</span>(obj, reduction, tag, n_dims, res) {</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">min</span>(n_dims, <span class="fu">ncol</span>(<span class="fu">Embeddings</span>(obj, reduction)))</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  graph_names <span class="ot">&lt;-</span> <span class="fu">paste0</span>(tag, <span class="fu">c</span>(<span class="st">"_nn"</span>, <span class="st">"_snn"</span>))</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  obj <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(obj, <span class="at">reduction =</span> reduction, <span class="at">dims =</span> d,</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>                       <span class="at">graph.name =</span> graph_names, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>  obj <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(obj, <span class="at">graph.name =</span> graph_names[<span class="dv">2</span>], <span class="at">resolution =</span> res,</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>                      <span class="at">cluster.name =</span> <span class="fu">paste0</span>(<span class="st">"clusters_"</span>, tag), <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>  obj <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(obj, <span class="at">reduction =</span> reduction, <span class="at">dims =</span> d,</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>                 <span class="at">reduction.name =</span> <span class="fu">paste0</span>(<span class="st">"umap_"</span>, tag),</span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>                 <span class="at">reduction.key =</span> <span class="fu">paste0</span>(<span class="st">"UMAP"</span>, tag, <span class="st">"_"</span>), <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>  obj</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Cluster the unintegrated principal-component embedding</span></span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">cluster_embedding</span>(sobj, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">tag =</span> <span class="st">"unintegrated"</span>,</span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>                          <span class="at">n_dims =</span> n_pcs, <span class="at">res =</span> cluster_res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The default method for RunUMAP has changed from calling Python UMAP via reticulate to the R-native UWOT using the cosine metric
+To use Python UMAP via reticulate, set umap.method to 'umap-learn' and metric to 'correlation'
+This message will be shown once per session</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualise the unintegrated embedding by cluster, sample and cell type</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(sobj, <span class="at">reduction =</span> <span class="st">"umap_unintegrated"</span>, <span class="at">group.by =</span> <span class="st">"clusters_unintegrated"</span>,</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>              <span class="at">label =</span> <span class="cn">TRUE</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Cluster"</span>)</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(sobj, <span class="at">reduction =</span> <span class="st">"umap_unintegrated"</span>, <span class="at">group.by =</span> <span class="st">"sample"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Sample"</span>)</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(sobj, <span class="at">reduction =</span> <span class="st">"umap_unintegrated"</span>, <span class="at">group.by =</span> <span class="st">"celltype"</span>) <span class="sc">+</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Cell type"</span>)</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2 <span class="sc">+</span> p3</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="1344"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Distribution of the samples within the unintegrated clusters</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>cluster_sample_df <span class="ot">&lt;-</span> <span class="fu">summarize_clusters_by_group</span>(sobj, <span class="st">"clusters_unintegrated"</span>, <span class="st">"sample"</span>)</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_cluster_sample</span>(cluster_sample_df, <span class="st">"Sample distribution"</span>) <span class="sc">+</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_cluster_freq</span>(cluster_sample_df, <span class="st">"Sample frequency"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Distribution of the cell types within the unintegrated clusters</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>cluster_celltype_df <span class="ot">&lt;-</span> <span class="fu">summarize_clusters_by_group</span>(sobj, <span class="st">"clusters_unintegrated"</span>, <span class="st">"celltype"</span>)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_cluster_freq</span>(cluster_celltype_df, <span class="st">"Cell-type frequency per unintegrated cluster"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="integration-methods" class="level2">
+<h2 class="anchored" data-anchor-id="integration-methods">Integration methods</h2>
+<p>Three integration approaches were applied to the principal-component embedding of the joint dataset, each producing a corrected low-dimensional embedding:</p>
+<ul>
+<li><strong>Harmony</strong> iteratively adjusts the position of the cells in the embedding with a soft clustering and a diversity penalty (<code>theta</code>); it was applied through the Seurat wrapper and through the standalone package.</li>
+<li><strong>RPCA</strong> aligns the samples with anchors found in reciprocal principal-component spaces, a conservative approach when populations are not fully shared.</li>
+<li><strong>CCA</strong> aligns the samples with anchors found in a canonical-correlation space, a stronger correction with a higher risk of over-correction.</li>
+</ul>
+<p>Harmony was additionally run with three values of <code>theta</code> (1, 2 and 4) to document how the strength of the correction affects sample mixing and the conservation of the biology. All methods were run with their default parameters, on the same 20 principal components.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Harmony through the Seurat wrapper (default parameters)</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">IntegrateLayers</span>(<span class="at">object =</span> sobj, <span class="at">method =</span> HarmonyIntegration,</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>                        <span class="at">orig.reduction =</span> <span class="st">"pca"</span>, <span class="at">new.reduction =</span> <span class="st">"harmony"</span>,</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>                        <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The `features` argument is ignored by `HarmonyIntegration`.
+This message is displayed once per session.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reciprocal PCA anchors</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">IntegrateLayers</span>(<span class="at">object =</span> sobj, <span class="at">method =</span> RPCAIntegration,</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>                        <span class="at">orig.reduction =</span> <span class="st">"pca"</span>, <span class="at">new.reduction =</span> <span class="st">"integrated.rpca"</span>,</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>                        <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span>n_pcs, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Canonical-correlation anchors</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">&lt;-</span> <span class="fu">IntegrateLayers</span>(<span class="at">object =</span> sobj, <span class="at">method =</span> CCAIntegration,</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>                        <span class="at">orig.reduction =</span> <span class="st">"pca"</span>, <span class="at">new.reduction =</span> <span class="st">"integrated.cca"</span>,</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>                        <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span>n_pcs, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(sobj<span class="sc">@</span>reductions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "pca"               "umap_unintegrated" "harmony"          
+[4] "integrated.rpca"   "integrated.cca"   </code></pre>
+</div>
+</div>
+<p>The standalone Harmony package requires joined layers. It was applied to a temporary joined copy of the object, and only the corrected embeddings were transferred back.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Run the standalone Harmony for several values of theta</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>sobj_joined <span class="ot">&lt;-</span> <span class="fu">JoinLayers</span>(sobj)</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>harmony_theta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>)</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (th <span class="cf">in</span> harmony_theta) {</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  red_name <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"harmony.theta"</span>, th)</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>  sobj_h <span class="ot">&lt;-</span> harmony<span class="sc">::</span><span class="fu">RunHarmony</span>(</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">object =</span> sobj_joined,</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">group.by.vars =</span> <span class="st">"sample"</span>,</span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduction.use =</span> <span class="st">"pca"</span>,</span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">dims.use =</span> <span class="dv">1</span><span class="sc">:</span>n_pcs,</span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">theta =</span> th,</span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduction.save =</span> <span class="st">"harmony_tmp"</span>,</span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">max_iter =</span> <span class="dv">100</span>,</span>
+<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Transfer the corrected embedding to the main object</span></span>
+<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a>  sobj[[red_name]] <span class="ot">&lt;-</span> <span class="fu">CreateDimReducObject</span>(</span>
+<span id="cb36-21"><a href="#cb36-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">embeddings =</span> <span class="fu">Embeddings</span>(sobj_h, <span class="st">"harmony_tmp"</span>),</span>
+<span id="cb36-22"><a href="#cb36-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">key =</span> <span class="fu">paste0</span>(<span class="st">"HarmonyTheta"</span>, th, <span class="st">"_"</span>),</span>
+<span id="cb36-23"><a href="#cb36-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="fu">DefaultAssay</span>(sobj)</span>
+<span id="cb36-24"><a href="#cb36-24" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb36-25"><a href="#cb36-25" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb36-26"><a href="#cb36-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-27"><a href="#cb36-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the temporary objects</span></span>
+<span id="cb36-28"><a href="#cb36-28" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(sobj_joined, sobj_h)</span>
+<span id="cb36-29"><a href="#cb36-29" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           used  (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells  4249472 227.0    6737985  359.9   6737985  359.9
+Vcells 84853385 647.4  260802348 1989.8 325286938 2481.8</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(sobj<span class="sc">@</span>reductions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "pca"               "umap_unintegrated" "harmony"          
+[4] "integrated.rpca"   "integrated.cca"    "harmony.theta1"   
+[7] "harmony.theta2"    "harmony.theta4"   </code></pre>
+</div>
+</div>
+<section id="clustering-on-the-integrated-embeddings" class="level3">
+<h3 class="anchored" data-anchor-id="clustering-on-the-integrated-embeddings">Clustering on the integrated embeddings</h3>
+<p>Each corrected embedding was clustered with the function used for the unintegrated embedding.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Summary of the embeddings compared</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>methods_tbl <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="fu">c</span>(<span class="st">"Unintegrated"</span>, <span class="st">"Harmony (Seurat)"</span>, <span class="st">"RPCA"</span>, <span class="st">"CCA"</span>,</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>             <span class="st">"Harmony theta 1"</span>, <span class="st">"Harmony theta 2"</span>, <span class="st">"Harmony theta 4"</span>),</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">reduction =</span> <span class="fu">c</span>(<span class="st">"pca"</span>, <span class="st">"harmony"</span>, <span class="st">"integrated.rpca"</span>, <span class="st">"integrated.cca"</span>,</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>                <span class="st">"harmony.theta1"</span>, <span class="st">"harmony.theta2"</span>, <span class="st">"harmony.theta4"</span>),</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">tag =</span> <span class="fu">c</span>(<span class="st">"unintegrated"</span>, <span class="st">"harmony"</span>, <span class="st">"rpca"</span>, <span class="st">"cca"</span>,</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>          <span class="st">"harmonyt1"</span>, <span class="st">"harmonyt2"</span>, <span class="st">"harmonyt4"</span>),</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Cluster each integrated embedding (the unintegrated one is already done)</span></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">nrow</span>(methods_tbl))) {</span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (methods_tbl<span class="sc">$</span>tag[i] <span class="sc">==</span> <span class="st">"unintegrated"</span>) <span class="cf">next</span></span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>  sobj <span class="ot">&lt;-</span> <span class="fu">cluster_embedding</span>(sobj, <span class="at">reduction =</span> methods_tbl<span class="sc">$</span>reduction[i],</span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>                            <span class="at">tag =</span> methods_tbl<span class="sc">$</span>tag[i], <span class="at">n_dims =</span> n_pcs, <span class="at">res =</span> cluster_res)</span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>methods_tbl<span class="sc">$</span>cluster_column <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"clusters_"</span>, methods_tbl<span class="sc">$</span>tag)</span>
+<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>methods_tbl<span class="sc">$</span>umap <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"umap_"</span>, methods_tbl<span class="sc">$</span>tag)</span>
+<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>methods_tbl</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>            method       reduction          tag        cluster_column
+1     Unintegrated             pca unintegrated clusters_unintegrated
+2 Harmony (Seurat)         harmony      harmony      clusters_harmony
+3             RPCA integrated.rpca         rpca         clusters_rpca
+4              CCA  integrated.cca          cca          clusters_cca
+5  Harmony theta 1  harmony.theta1    harmonyt1    clusters_harmonyt1
+6  Harmony theta 2  harmony.theta2    harmonyt2    clusters_harmonyt2
+7  Harmony theta 4  harmony.theta4    harmonyt4    clusters_harmonyt4
+               umap
+1 umap_unintegrated
+2      umap_harmony
+3         umap_rpca
+4          umap_cca
+5    umap_harmonyt1
+6    umap_harmonyt2
+7    umap_harmonyt4</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="evaluation-of-the-integration" class="level2">
+<h2 class="anchored" data-anchor-id="evaluation-of-the-integration">Evaluation of the integration</h2>
+<p>The methods were evaluated on two complementary criteria, computed on the same 20 dimensions and with the same labels.</p>
+<p><strong>Mixing of the samples</strong> (the correction should remove the technical difference):</p>
+<ul>
+<li><em>iLISI</em> is the inverse Simpson index of the sample composition among the 90 nearest neighbours of each cell. It was rescaled from 0 (neighbourhoods containing a single sample) to 1 (neighbourhoods containing both samples in equal proportions).</li>
+<li><em>Cluster deviation</em> is the mean absolute difference, weighted by cluster size, between the fraction of Octo cells in a cluster and the fraction of Octo cells in the whole dataset; 0 corresponds to a perfect mixing.</li>
+</ul>
+<p><strong>Conservation of the biology</strong> (the correction should not merge distinct cell types):</p>
+<ul>
+<li><em>cLISI purity</em> is the inverse Simpson index of the cell-type composition among the nearest neighbours, rescaled from 0 (neighbourhoods containing all the cell types) to 1 (neighbourhoods containing a single cell type).</li>
+<li><em>ARI</em> is the adjusted Rand index between the clusters and the Manual annotation, computed on the Manual cells only, which are the only cells carrying an annotation rather than a transferred label.</li>
+<li><em>Silhouette</em> is the mean silhouette width of the cell types, averaged over the cell types, on a random subset of 2,000 cells.</li>
+</ul>
+<p>The LISI metrics were computed with a nearest-neighbour implementation with uniform weights, a simplified version of the original LISI that does not require an additional package.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Inverse Simpson index of the label composition among the k nearest neighbours</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>knn_lisi <span class="ot">&lt;-</span> <span class="cf">function</span>(embedding, labels, <span class="at">k =</span> <span class="dv">90</span>) {</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>  nn <span class="ot">&lt;-</span> RANN<span class="sc">::</span><span class="fu">nn2</span>(embedding, <span class="at">k =</span> k <span class="sc">+</span> <span class="dv">1</span>)<span class="sc">$</span>nn.idx[, <span class="sc">-</span><span class="dv">1</span>, drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  lab <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(<span class="fu">factor</span>(labels))</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>  n_lab <span class="ot">&lt;-</span> <span class="fu">max</span>(lab)</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">vapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(nn)), <span class="cf">function</span>(i) {</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> <span class="fu">tabulate</span>(lab[nn[i, ]], <span class="at">nbins =</span> n_lab) <span class="sc">/</span> k</span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span> <span class="sc">/</span> <span class="fu">sum</span>(p<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>  }, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Adjusted Rand index between two partitions</span></span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a>adjusted_rand_index <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) {</span>
+<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a>  tab <span class="ot">&lt;-</span> <span class="fu">table</span>(x, y)</span>
+<span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">sum</span>(tab)</span>
+<span id="cb42-17"><a href="#cb42-17" aria-hidden="true" tabindex="-1"></a>  sum_comb <span class="ot">&lt;-</span> <span class="cf">function</span>(v) <span class="fu">sum</span>(<span class="fu">choose</span>(v, <span class="dv">2</span>))</span>
+<span id="cb42-18"><a href="#cb42-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-19"><a href="#cb42-19" aria-hidden="true" tabindex="-1"></a>  index <span class="ot">&lt;-</span> <span class="fu">sum_comb</span>(tab)</span>
+<span id="cb42-20"><a href="#cb42-20" aria-hidden="true" tabindex="-1"></a>  sum_rows <span class="ot">&lt;-</span> <span class="fu">sum_comb</span>(<span class="fu">rowSums</span>(tab))</span>
+<span id="cb42-21"><a href="#cb42-21" aria-hidden="true" tabindex="-1"></a>  sum_cols <span class="ot">&lt;-</span> <span class="fu">sum_comb</span>(<span class="fu">colSums</span>(tab))</span>
+<span id="cb42-22"><a href="#cb42-22" aria-hidden="true" tabindex="-1"></a>  expected <span class="ot">&lt;-</span> sum_rows <span class="sc">*</span> sum_cols <span class="sc">/</span> <span class="fu">choose</span>(n, <span class="dv">2</span>)</span>
+<span id="cb42-23"><a href="#cb42-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-24"><a href="#cb42-24" aria-hidden="true" tabindex="-1"></a>  (index <span class="sc">-</span> expected) <span class="sc">/</span> ((sum_rows <span class="sc">+</span> sum_cols) <span class="sc">/</span> <span class="dv">2</span> <span class="sc">-</span> expected)</span>
+<span id="cb42-25"><a href="#cb42-25" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the cells used for the silhouette and the Manual cells used for the ARI</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(the.seed)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>silhouette_cells <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">ncol</span>(sobj), <span class="fu">min</span>(<span class="dv">2000</span>, <span class="fu">ncol</span>(sobj)))</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>is_manual <span class="ot">&lt;-</span> sobj<span class="sc">$</span>sample <span class="sc">==</span> <span class="st">"Manual"</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>n_samples <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">unique</span>(sobj<span class="sc">$</span>sample))</span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>n_labels <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">unique</span>(sobj<span class="sc">$</span>celltype))</span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Evaluate one embedding</span></span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>evaluate_embedding <span class="ot">&lt;-</span> <span class="cf">function</span>(obj, reduction, cluster_column, n_dims) {</span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">min</span>(n_dims, <span class="fu">ncol</span>(<span class="fu">Embeddings</span>(obj, reduction)))</span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>  emb <span class="ot">&lt;-</span> <span class="fu">Embeddings</span>(obj, reduction)[, d, drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>  clusters <span class="ot">&lt;-</span> obj<span class="sc">@</span>meta.data[[cluster_column]]</span>
+<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-15"><a href="#cb43-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Mixing of the samples</span></span>
+<span id="cb43-16"><a href="#cb43-16" aria-hidden="true" tabindex="-1"></a>  ilisi <span class="ot">&lt;-</span> <span class="fu">knn_lisi</span>(emb, obj<span class="sc">$</span>sample, <span class="at">k =</span> k_lisi)</span>
+<span id="cb43-17"><a href="#cb43-17" aria-hidden="true" tabindex="-1"></a>  tab <span class="ot">&lt;-</span> <span class="fu">table</span>(clusters, obj<span class="sc">$</span>sample)</span>
+<span id="cb43-18"><a href="#cb43-18" aria-hidden="true" tabindex="-1"></a>  frac_octo <span class="ot">&lt;-</span> tab[, <span class="st">"Octo"</span>] <span class="sc">/</span> <span class="fu">rowSums</span>(tab)</span>
+<span id="cb43-19"><a href="#cb43-19" aria-hidden="true" tabindex="-1"></a>  p_global <span class="ot">&lt;-</span> <span class="fu">mean</span>(obj<span class="sc">$</span>sample <span class="sc">==</span> <span class="st">"Octo"</span>)</span>
+<span id="cb43-20"><a href="#cb43-20" aria-hidden="true" tabindex="-1"></a>  cluster_deviation <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">rowSums</span>(tab) <span class="sc">*</span> <span class="fu">abs</span>(frac_octo <span class="sc">-</span> p_global)) <span class="sc">/</span> <span class="fu">sum</span>(tab)</span>
+<span id="cb43-21"><a href="#cb43-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-22"><a href="#cb43-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Conservation of the biology</span></span>
+<span id="cb43-23"><a href="#cb43-23" aria-hidden="true" tabindex="-1"></a>  clisi <span class="ot">&lt;-</span> <span class="fu">knn_lisi</span>(emb, obj<span class="sc">$</span>celltype, <span class="at">k =</span> k_lisi)</span>
+<span id="cb43-24"><a href="#cb43-24" aria-hidden="true" tabindex="-1"></a>  ari <span class="ot">&lt;-</span> <span class="fu">adjusted_rand_index</span>(clusters[is_manual], obj<span class="sc">$</span>celltype[is_manual])</span>
+<span id="cb43-25"><a href="#cb43-25" aria-hidden="true" tabindex="-1"></a>  lab_int <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(<span class="fu">factor</span>(obj<span class="sc">$</span>celltype[silhouette_cells]))</span>
+<span id="cb43-26"><a href="#cb43-26" aria-hidden="true" tabindex="-1"></a>  sil <span class="ot">&lt;-</span> <span class="fu">silhouette</span>(lab_int, <span class="fu">dist</span>(emb[silhouette_cells, , <span class="at">drop =</span> <span class="cn">FALSE</span>]))</span>
+<span id="cb43-27"><a href="#cb43-27" aria-hidden="true" tabindex="-1"></a>  sil_width <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">tapply</span>(sil[, <span class="st">"sil_width"</span>], lab_int, mean))</span>
+<span id="cb43-28"><a href="#cb43-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-29"><a href="#cb43-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb43-30"><a href="#cb43-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_clusters =</span> <span class="fu">length</span>(<span class="fu">unique</span>(clusters)),</span>
+<span id="cb43-31"><a href="#cb43-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">ilisi_norm =</span> (<span class="fu">mean</span>(ilisi) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">/</span> (n_samples <span class="sc">-</span> <span class="dv">1</span>),</span>
+<span id="cb43-32"><a href="#cb43-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">cluster_deviation =</span> cluster_deviation,</span>
+<span id="cb43-33"><a href="#cb43-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">clisi_purity =</span> (n_labels <span class="sc">-</span> <span class="fu">mean</span>(clisi)) <span class="sc">/</span> (n_labels <span class="sc">-</span> <span class="dv">1</span>),</span>
+<span id="cb43-34"><a href="#cb43-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">ari_manual =</span> ari,</span>
+<span id="cb43-35"><a href="#cb43-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">silhouette =</span> sil_width</span>
+<span id="cb43-36"><a href="#cb43-36" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb43-37"><a href="#cb43-37" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb43-38"><a href="#cb43-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-39"><a href="#cb43-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Evaluate all embeddings</span></span>
+<span id="cb43-40"><a href="#cb43-40" aria-hidden="true" tabindex="-1"></a>metrics_list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(methods_tbl)), <span class="cf">function</span>(i) {</span>
+<span id="cb43-41"><a href="#cb43-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">evaluate_embedding</span>(sobj, methods_tbl<span class="sc">$</span>reduction[i], methods_tbl<span class="sc">$</span>cluster_column[i], n_pcs)</span>
+<span id="cb43-42"><a href="#cb43-42" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb43-43"><a href="#cb43-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-44"><a href="#cb43-44" aria-hidden="true" tabindex="-1"></a>metrics_tbl <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="at">method =</span> methods_tbl<span class="sc">$</span>method, <span class="fu">do.call</span>(rbind, metrics_list))</span>
+<span id="cb43-45"><a href="#cb43-45" aria-hidden="true" tabindex="-1"></a>metrics_tbl[, <span class="sc">-</span><span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="fu">round</span>(metrics_tbl[, <span class="sc">-</span><span class="dv">1</span>], <span class="dv">3</span>)</span>
+<span id="cb43-46"><a href="#cb43-46" aria-hidden="true" tabindex="-1"></a>metrics_tbl</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>            method n_clusters ilisi_norm cluster_deviation clisi_purity
+1     Unintegrated         14      0.908             0.064        0.987
+2 Harmony (Seurat)         14      0.928             0.062        0.987
+3             RPCA         14      0.926             0.061        0.987
+4              CCA         13      0.903             0.061        0.988
+5  Harmony theta 1         14      0.927             0.063        0.987
+6  Harmony theta 2         14      0.928             0.062        0.987
+7  Harmony theta 4         14      0.929             0.060        0.987
+  ari_manual silhouette
+1      0.676      0.343
+2      0.660      0.345
+3      0.715      0.351
+4      0.660      0.357
+5      0.691      0.345
+6      0.710      0.345
+7      0.661      0.344</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualise the mixing and the conservation of each method</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>metrics_plot <span class="ot">&lt;-</span> metrics_tbl <span class="sc">%&gt;%</span></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">method =</span> <span class="fu">factor</span>(method, <span class="at">levels =</span> method))</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>p_mix <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(metrics_plot, <span class="fu">aes</span>(<span class="at">x =</span> method, <span class="at">y =</span> ilisi_norm, <span class="at">fill =</span> method)) <span class="sc">+</span></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Mixing of the samples (iLISI)"</span>, <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"Normalised iLISI"</span>) <span class="sc">+</span></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>() <span class="sc">+</span></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>))</span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>p_bio <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(metrics_plot, <span class="fu">aes</span>(<span class="at">x =</span> method, <span class="at">y =</span> clisi_purity, <span class="at">fill =</span> method)) <span class="sc">+</span></span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Conservation of the cell types (cLISI purity)"</span>, <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"cLISI purity"</span>) <span class="sc">+</span></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>() <span class="sc">+</span></span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>))</span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>p_mix <span class="sc">+</span> p_bio</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid figure-img" width="1056"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="visual-assessment" class="level2">
+<h2 class="anchored" data-anchor-id="visual-assessment">Visual assessment</h2>
+<p>The UMAP of each embedding was coloured by sample and by cell type. Well-integrated samples overlap within each cell type, while the cell types remain separated.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the sample and the cell types on the UMAP of one method</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>plot_method_umap <span class="ot">&lt;-</span> <span class="cf">function</span>(i) {</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(sobj, <span class="at">reduction =</span> methods_tbl<span class="sc">$</span>umap[i], <span class="at">group.by =</span> <span class="st">"sample"</span>) <span class="sc">+</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ggtitle</span>(<span class="fu">paste</span>(methods_tbl<span class="sc">$</span>method[i], <span class="st">"- sample"</span>)),</span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(sobj, <span class="at">reduction =</span> methods_tbl<span class="sc">$</span>umap[i], <span class="at">group.by =</span> <span class="st">"celltype"</span>) <span class="sc">+</span></span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ggtitle</span>(<span class="fu">paste</span>(methods_tbl<span class="sc">$</span>method[i], <span class="st">"- cell type"</span>))</span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Unintegrated, Harmony, RPCA and CCA</span></span>
+<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(<span class="fu">unlist</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, plot_method_umap), <span class="at">recursive =</span> <span class="cn">FALSE</span>), <span class="at">ncol =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Harmony with the three values of theta</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(<span class="fu">unlist</span>(<span class="fu">lapply</span>(<span class="dv">5</span><span class="sc">:</span><span class="dv">7</span>, plot_method_umap), <span class="at">recursive =</span> <span class="cn">FALSE</span>), <span class="at">ncol =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="selection-of-the-embedding" class="level2">
+<h2 class="anchored" data-anchor-id="selection-of-the-embedding">Selection of the embedding</h2>
+<p>The embedding was selected with the rule defined before the analysis. An integrated embedding was eligible if it conserved the biology, with a cLISI purity and an ARI within 0.05 of the unintegrated embedding, and if it improved the iLISI by at least 0.05. Among the eligible embeddings, the one with the highest iLISI was retained. If no integrated embedding was eligible, the unintegrated embedding was retained.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the selection rule</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>baseline <span class="ot">&lt;-</span> metrics_tbl[metrics_tbl<span class="sc">$</span>method <span class="sc">==</span> <span class="st">"Unintegrated"</span>, ]</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>eligible <span class="ot">&lt;-</span> metrics_tbl <span class="sc">%&gt;%</span></span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(method <span class="sc">!=</span> <span class="st">"Unintegrated"</span>,</span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>         clisi_purity <span class="sc">&gt;=</span> baseline<span class="sc">$</span>clisi_purity <span class="sc">-</span> tol_bio,</span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>         ari_manual <span class="sc">&gt;=</span> baseline<span class="sc">$</span>ari_manual <span class="sc">-</span> tol_bio,</span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>         ilisi_norm <span class="sc">&gt;=</span> baseline<span class="sc">$</span>ilisi_norm <span class="sc">+</span> min_gain_mixing)</span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a>selected_method <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">nrow</span>(eligible) <span class="sc">==</span> <span class="dv">0</span>) <span class="st">"Unintegrated"</span> <span class="cf">else</span></span>
+<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>  eligible<span class="sc">$</span>method[<span class="fu">which.max</span>(eligible<span class="sc">$</span>ilisi_norm)]</span>
+<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a>selected_row <span class="ot">&lt;-</span> methods_tbl[methods_tbl<span class="sc">$</span>method <span class="sc">==</span> selected_method, ]</span>
+<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a>selected_reduction <span class="ot">&lt;-</span> selected_row<span class="sc">$</span>reduction</span>
+<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-16"><a href="#cb48-16" aria-hidden="true" tabindex="-1"></a>eligible</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] method            n_clusters        ilisi_norm        cluster_deviation
+[5] clisi_purity      ari_manual        silhouette       
+&lt;0 rows&gt; (or 0-length row.names)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Selected embedding:"</span>, selected_method, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Selected embedding: Unintegrated </code></pre>
+</div>
+</div>
+<p>The unintegrated embedding had a normalised iLISI of 0.908. The retained embedding was <strong>Unintegrated</strong>, with a normalised iLISI of 0.908, a cLISI purity of 0.987 and an ARI of 0.676.</p>
+<p>The distribution of the samples within the clusters of the retained embedding was examined as for the unintegrated embedding.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Distribution of the samples within the clusters of the retained embedding</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>selected_cluster_df <span class="ot">&lt;-</span> <span class="fu">summarize_clusters_by_group</span>(sobj, selected_row<span class="sc">$</span>cluster_column, <span class="st">"sample"</span>)</span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_cluster_sample</span>(selected_cluster_df, <span class="fu">paste</span>(<span class="st">"Sample distribution -"</span>, selected_method)) <span class="sc">+</span></span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_cluster_freq</span>(selected_cluster_df, <span class="fu">paste</span>(<span class="st">"Sample frequency -"</span>, selected_method))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-30-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Distribution of the cell types within the clusters of the retained embedding</span></span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>selected_celltype_df <span class="ot">&lt;-</span> <span class="fu">summarize_clusters_by_group</span>(sobj, selected_row<span class="sc">$</span>cluster_column,</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>                                                    <span class="st">"celltype"</span>)</span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_cluster_freq</span>(selected_celltype_df,</span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a>                  <span class="fu">paste</span>(<span class="st">"Cell-type frequency per cluster -"</span>, selected_method))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Glioblastoma_scRNAseq_Integration_files/figure-html/unnamed-chunk-31-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+<section id="scope-and-limits-of-the-evaluation" class="level3">
+<h3 class="anchored" data-anchor-id="scope-and-limits-of-the-evaluation">Scope and limits of the evaluation</h3>
+<p>This evaluation compares embeddings obtained from two technical replicates of the same specimen, so it measures the sensitivity of the analysis to the dissociation method and not to a difference between patients. The conservation metrics rely on the Manual annotation and on the labels transferred to the Octo cells; the independent annotation of the Octo cells with the marker panel of the Manual sample is performed in the comparison document, and the agreement between the two annotations is reported there. The silhouette was computed on a subset of 2,000 cells with a fixed seed.</p>
+</section>
+</section>
+<section id="saving-the-integrated-object" class="level2">
+<h2 class="anchored" data-anchor-id="saving-the-integrated-object">Saving the integrated object</h2>
+<p>The layers were joined for the downstream analyses, which use the normalised expression of the <code>RNA</code> assay. The corrected embeddings, the clusters and the UMAPs of all methods were kept in the object, together with the retained embedding. The metrics table was saved for the comparison document.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join the layers for the downstream analyses</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>sobjIntegrated <span class="ot">&lt;-</span> <span class="fu">JoinLayers</span>(sobj)</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Store the integration summary with the object</span></span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a><span class="fu">Misc</span>(sobjIntegrated, <span class="at">slot =</span> <span class="st">"integration"</span>) <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">selected_method =</span> selected_method,</span>
+<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">selected_reduction =</span> selected_reduction,</span>
+<span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">selected_tag =</span> selected_row<span class="sc">$</span>tag,</span>
+<span id="cb54-9"><a href="#cb54-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_pcs =</span> n_pcs,</span>
+<span id="cb54-10"><a href="#cb54-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">cluster_resolution =</span> cluster_res</span>
+<span id="cb54-11"><a href="#cb54-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb54-12"><a href="#cb54-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-13"><a href="#cb54-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the integrated object and the metrics</span></span>
+<span id="cb54-14"><a href="#cb54-14" aria-hidden="true" tabindex="-1"></a>integrated_output_file <span class="ot">&lt;-</span> <span class="st">"../data/processed_data/brain_manual_octo_INTEGRATED.rda"</span></span>
+<span id="cb54-15"><a href="#cb54-15" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(sobjIntegrated, <span class="at">file =</span> integrated_output_file)</span>
+<span id="cb54-16"><a href="#cb54-16" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(metrics_tbl, <span class="st">"../data/processed_data/integration_metrics.csv"</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb54-17"><a href="#cb54-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-18"><a href="#cb54-18" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Integrated object saved to:"</span>, integrated_output_file, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Integrated object saved to: ../data/processed_data/brain_manual_octo_INTEGRATED.rda </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Record the software versions used in the analysis</span></span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.4.3 (2025-02-28 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+
+
+locale:
+[1] LC_COLLATE=English_United States.utf8 
+[2] LC_CTYPE=English_United States.utf8   
+[3] LC_MONETARY=English_United States.utf8
+[4] LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Europe/Berlin
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] future_1.82.0      cluster_2.1.8      harmony_1.2.4      Rcpp_1.0.14       
+ [5] patchwork_1.3.2    ggplot2_4.0.3      dplyr_1.2.1        Seurat_5.5.0      
+ [9] SeuratObject_5.4.0 sp_2.2-0          
+
+loaded via a namespace (and not attached):
+  [1] deldir_2.0-4           pbapply_1.7-5          gridExtra_2.3.1       
+  [4] rlang_1.2.0            magrittr_2.0.3         RcppAnnoy_0.0.23      
+  [7] otel_0.3.0             spatstat.geom_3.7-3    matrixStats_1.5.0     
+ [10] ggridges_0.5.7         compiler_4.4.3         png_0.1-9             
+ [13] vctrs_0.7.3            reshape2_1.4.5         stringr_1.6.0         
+ [16] pkgconfig_2.0.3        fastmap_1.2.0          labeling_0.4.3        
+ [19] utf8_1.2.6             promises_1.5.0         rmarkdown_2.32        
+ [22] purrr_1.2.2            xfun_0.57              jsonlite_1.9.1        
+ [25] goftest_1.2-3          later_1.4.8            spatstat.utils_3.2-2  
+ [28] irlba_2.3.7            parallel_4.4.3         R6_2.6.1              
+ [31] ica_1.0-3              stringi_1.8.7          RColorBrewer_1.1-3    
+ [34] spatstat.data_3.1-9    reticulate_1.46.0      parallelly_1.47.0     
+ [37] spatstat.univar_3.1-7  lmtest_0.9-40          scattermore_1.2       
+ [40] knitr_1.52             tensor_1.5.1           future.apply_1.21.0   
+ [43] zoo_1.8-15             sctransform_0.4.3      httpuv_1.6.17         
+ [46] Matrix_1.7-2           splines_4.4.3          igraph_2.3.0          
+ [49] tidyselect_1.2.1       rstudioapi_0.19.0      abind_1.4-8           
+ [52] yaml_2.3.12            spatstat.random_3.4-5  codetools_0.2-20      
+ [55] miniUI_0.1.2           spatstat.explore_3.8-0 listenv_1.1.0         
+ [58] lattice_0.22-6         tibble_3.2.1           plyr_1.8.9            
+ [61] withr_3.0.3            shiny_1.14.0           S7_0.2.2              
+ [64] ROCR_1.0-12            evaluate_1.0.5         Rtsne_0.17            
+ [67] fastDummies_1.7.6      survival_3.8-3         polyclip_1.10-7       
+ [70] fitdistrplus_1.2-6     pillar_1.11.1          KernSmooth_2.23-26    
+ [73] plotly_4.12.1          generics_0.1.4         RcppHNSW_0.6.0        
+ [76] scales_1.4.0           globals_0.20.0         xtable_1.8-8          
+ [79] RhpcBLASctl_0.23-42    glue_1.8.0             tools_4.4.3           
+ [82] data.table_1.18.2.1    RSpectra_0.16-2        RANN_2.6.2            
+ [85] dotCall64_1.2          cowplot_1.2.0          grid_4.4.3            
+ [88] tidyr_1.3.2            nlme_3.1-167           cli_3.6.4             
+ [91] spatstat.sparse_3.1-0  spam_2.11-3            viridisLite_0.4.3     
+ [94] uwot_0.2.4             gtable_0.3.6           digest_0.6.39         
+ [97] progressr_1.1.0        ggrepel_0.9.8          htmlwidgets_1.6.4     
+[100] farver_2.1.2           htmltools_0.5.9        lifecycle_1.0.5       
+[103] httr_1.4.9             mime_0.12              MASS_7.3-64           </code></pre>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
