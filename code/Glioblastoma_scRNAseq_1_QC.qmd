@@ -101,19 +101,67 @@ By visualization, we take 3000 as the knee of this plot.
 An initial Seurat object was created by retaining genes detected in at least five barcodes and barcodes containing at least 200 detected genes. This first permissive filtering step removed the lowest-complexity portion of the raw matrix while preserving candidate cells for further inspection
 
 ```{r}
-# Create an initial Seurat object using permissive thresholds
-sobj <- CreateSeuratObject(
-  counts = scmat,
-  min.cells = 5,
-  min.features = 200,
-  project = sample.name)
+suppressPackageStartupMessages(library(SoupX))
 
-# Record the dimensions after the initial Seurat filtering
+# Define candidate cells (barcodes with >= 200 detected genes)
+cell_barcodes <- colnames(scmat)[Matrix::colSums(scmat > 0) >= 200]
+filt_mat <- scmat[, cell_barcodes]
+
+# Initialize the SoupChannel
+sc <- SoupChannel(scmat, filt_mat)
+
+# Perform temporary clustering to identify cell-type specific markers for background estimation
+cat("Running temporary clustering for SoupX marker identification...\n")
+sobj_temp <- CreateSeuratObject(counts = filt_mat)
+sobj_temp <- NormalizeData(sobj_temp, verbose = FALSE)
+sobj_temp <- FindVariableFeatures(sobj_temp, verbose = FALSE)
+sobj_temp <- ScaleData(sobj_temp, verbose = FALSE)
+sobj_temp <- RunPCA(sobj_temp, verbose = FALSE)
+sobj_temp <- FindNeighbors(sobj_temp, dims = 1:20, verbose = FALSE)
+sobj_temp <- FindClusters(sobj_temp, resolution = 0.5, verbose = FALSE)
+
+sc <- setClusters(sc, setNames(sobj_temp$seurat_clusters, colnames(sobj_temp)))
+
+# Estimate the ambient RNA contamination fraction (rho)
+sc <- autoEstCont(sc, 
+                  tfidfMin = 1.0, 
+                  soupQuantile = 0.90, 
+                  priorRho = 0.05, 
+                  priorRhoStdDev = 0.1)
+
+# Generate the corrected count matrix (integer format for downstream compatibility)
+adj_matrix <- adjustCounts(sc, roundToInt = TRUE)
+
+# --- Diagnostic Block: Assess overall ambient RNA removal ---
+removed_counts <- filt_mat - adj_matrix
+
+# 1. Calculate global impact
+total_original <- sum(filt_mat)
+total_removed <- sum(removed_counts)
+pct_removed <- round(100 * total_removed / total_original, 2)
+
+cat("--- SoupX Correction Summary ---\n")
+cat("Total ambient UMIs removed:", total_removed, sprintf("(%s%% of entire dataset)\n", pct_removed))
+
+# 2. Identify the genes that formed the majority of the "soup"
+top_soup_genes <- head(sort(Matrix::rowSums(removed_counts), decreasing = TRUE), 10)
+cat("\nTop 10 genes most affected by ambient RNA removal:\n")
+print(top_soup_genes)
+
+# Initialize the final Seurat object with the cleaned matrix
+sobj <- CreateSeuratObject(counts = adj_matrix, 
+                           project = sample.name, 
+                           min.cells = 5, 
+                           min.features = 200)
+
 n_initial_cells <- ncol(sobj)
 n_retained_genes <- nrow(sobj)
 
-cat("Candidate barcodes:", n_initial_cells, "\n")
-cat("Retained genes:", n_retained_genes, "\n")
+cat("\nSoupX Correction Complete. Initial candidate barcodes:", n_initial_cells, "\n")
+
+# Free memory 
+rm(sobj_temp, sc, filt_mat, scmat, removed_counts, top_soup_genes)
+gc()
 ```
 
 The initial object contained 10 306 candidate barcodes and 18 988 genes.
