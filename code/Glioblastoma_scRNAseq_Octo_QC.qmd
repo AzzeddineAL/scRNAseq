@@ -1,0 +1,675 @@
+---
+title: "Glioblastoma scRNA-seq - Quality Control of the Octo-Dissociated Sample"
+subtitle: "Glioblastoma FFPE Tissue Dissociated with the gentleMACS Octo Dissociator, Multiplexed Samples"
+format: html
+editor: visual
+---
+
+## Quality Check of the data
+
+### Analysis setup
+
+This document performs the quality control of the glioblastoma sample dissociated with the gentleMACS Octo Dissociator. The sample originates from the same donor and FFPE specimen as the manually dissociated sample, and was processed with the same probe panel, in the same GEM lane and with the same Cell Ranger version (7.1.0). The dissociation method is therefore the only experimental difference between the two samples.
+
+The workflow and the thresholds are identical to those applied to the Manual sample (`Glioblastoma_scRNAseq_QC.qmd`), so that the quality metrics of both samples are directly comparable. A fixed random seed was used to ensure reproducibility, particularly for the doublet-detection step.
+
+```{r}
+# Define the sample information
+sample.name <- "brain_octo"
+sample_label <- "Octo"
+species <- "Human"
+
+# Set a fixed random seed for reproducibility
+the.seed <- 42
+set.seed(the.seed)
+
+# Load the packages required for quality control and doublet detection
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(ggplot2)
+  library(patchwork)
+  library(SingleCellExperiment)
+  library(scDblFinder)
+})
+```
+
+The quality-control thresholds were defined once and are identical to those of the Manual sample. The number of cells called by Cell Ranger for each sample, as reported on the 10x Genomics dataset page, was recorded as an external reference.
+
+```{r}
+# Define the QC thresholds, identical to those of the Manual sample
+minGenes <- 800
+minUmi <- 1000
+maxpct_mt <- 10
+
+# Cells called by Cell Ranger for each sample (10x Genomics dataset page)
+cellranger_cells <- c(Manual = 4620, Octo = 4599)
+
+# Format numbers consistently in the text
+fmt <- function(x) format(x, big.mark = ",", scientific = FALSE, trim = TRUE)
+```
+
+Dataset from 10x Genomics: Mixture of Lung Cancer and Glioblastoma FFPE Tissues Dissociated Manually or using gentleMACS Dissociator, Multiplexed Samples, 4 Probe Barcodes (Next GEM). Sample used: Brain Cancer, Octo Dissociator.
+
+<https://www.10xgenomics.com/datasets/mixture-of-lung-cancer-and-glioblastoma-ffpe-tissues-dissociated-manually-or-using-gentlemacs-dissociator-multiplexed-samples-4-probe-barcodes-1-standard>
+
+## Loading the raw count matrix
+
+The raw feature-barcode matrix of the Octo-dissociated glioblastoma sample was used, as for the Manual sample. It contains both cell-containing droplets and a large number of empty droplets.
+
+```{r}
+# Define the path to the raw 10x Genomics feature-barcode matrix
+raw_data_path <- "../data/raw_data/sample_raw_feature_bc_matrix_octo"
+stopifnot(dir.exists(raw_data_path))
+
+# Read the sparse count matrix
+scmat <- Read10X(
+  data.dir = raw_data_path
+)
+
+# Keep the gene-expression matrix if several feature types were returned
+if (is.list(scmat)) scmat <- scmat[["Gene Expression"]]
+
+# Verify the structure of the imported object
+class(scmat)
+dim(scmat)
+```
+
+The dimensions of the raw matrix were recorded before filtering.
+
+```{r}
+# Record the dimensions of the unfiltered matrix
+n_raw_features <- nrow(scmat)
+n_raw_barcodes <- ncol(scmat)
+
+cat("Raw features:", n_raw_features, "\n")
+cat("Raw barcodes:", n_raw_barcodes, "\n")
+```
+
+The raw matrix contained `r fmt(n_raw_features)` features and `r fmt(n_raw_barcodes)` barcodes. At this stage, barcodes should not all be interpreted as cells because the raw matrix includes empty droplets and background RNA.
+
+## Barcode-rank curve
+
+The total number of UMIs was calculated for every barcode. Barcodes were then ranked from the highest to the lowest RNA content to generate a barcode-rank, or knee, plot.
+
+```{r}
+# Calculate the total number of UMIs detected in each barcode
+nb_umi_by_barcode <- data.frame(
+  barcode = colnames(scmat),
+  nb_umi = Matrix::colSums(scmat)
+)
+
+# Rank barcodes from the highest to the lowest UMI count
+nb_umi_by_barcode <- nb_umi_by_barcode %>%
+  arrange(desc(nb_umi)) %>%
+  mutate(barcode_rank = seq_len(n()))
+
+# Count the barcodes above the applied UMI threshold and above the Manual knee
+n_above_minumi <- sum(nb_umi_by_barcode$nb_umi > minUmi)
+n_above_knee <- sum(nb_umi_by_barcode$nb_umi > 3000)
+```
+
+The curve was used as a diagnostic representation of the transition between RNA-rich droplets and the background population. The applied UMI threshold and the knee position identified visually for the Manual sample (3,000 UMIs) are shown as dashed lines.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 6
+
+# Plot the barcode-rank curve with the reference thresholds
+nb_umi_by_barcode %>%
+  filter(nb_umi > 0) %>%
+  ggplot(aes(x = barcode_rank, y = nb_umi)) +
+  geom_point(size = 0.5, alpha = 0.6) +
+  geom_hline(yintercept = minUmi, colour = "green", linetype = "dashed") +
+  geom_hline(yintercept = 3000, colour = "blue", linetype = "dashed") +
+  scale_x_log10(name = "Droplet rank (log scale)") +
+  scale_y_log10(name = "Number of UMIs per droplet (log scale)") +
+  labs(title = paste0("Barcode-rank plot of the ", sample.name, " sample")) +
+  theme_classic()
+```
+
+A total of `r fmt(n_above_minumi)` barcodes exceeded the applied threshold of `r fmt(minUmi)` UMIs and `r fmt(n_above_knee)` barcodes exceeded 3,000 UMIs, compared with `r fmt(cellranger_cells[["Octo"]])` cells called by Cell Ranger for this sample.
+
+The transition was not used as a strict automated cell-calling threshold: subsequent filtering was based on the observed gene, UMI and mitochondrial distributions. As the raw matrix was used, the initial gene and UMI filters also acted as an empirical empty-droplet filter. A statistical method such as `DropletUtils::emptyDrops()` could be used as a complementary sensitivity analysis, but it was not used to define the primary dataset in this workflow.
+
+## Initial creation of the Seurat object
+
+An initial Seurat object was created by retaining genes detected in at least five barcodes and barcodes containing at least 200 detected genes. This first permissive filtering step removed the lowest-complexity portion of the raw matrix while preserving candidate cells for further inspection.
+
+```{r}
+# Create an initial Seurat object using permissive thresholds
+sobj <- CreateSeuratObject(
+  counts = scmat,
+  min.cells = 5,
+  min.features = 200,
+  project = sample.name
+)
+
+# Record the dimensions after the initial Seurat filtering
+n_initial_cells <- ncol(sobj)
+n_retained_genes <- nrow(sobj)
+
+cat("Candidate barcodes:", n_initial_cells, "\n")
+cat("Retained genes:", n_retained_genes, "\n")
+```
+
+The initial object contained `r fmt(n_initial_cells)` candidate barcodes and `r fmt(n_retained_genes)` genes.
+
+The percentage of mitochondrial transcripts was calculated for every candidate barcode from the genes beginning with `MT-`. Its distribution was assessed after the complexity filtering, in the dedicated section below.
+
+```{r}
+# Calculate the percentage of mitochondrial transcripts in each barcode
+sobj$percent_mt <- PercentageFeatureSet(sobj, pattern = "^MT-")
+
+# Inspect the metadata generated by Seurat
+head(sobj@meta.data)
+
+# Inspect a small portion of the count matrix using the public accessor
+GetAssayData(sobj, assay = "RNA", layer = "counts")[1:5, 1:5]
+```
+
+The raw matrix and the barcode-rank table were no longer required after creation of the Seurat object.
+
+```{r}
+# Remove large intermediate objects to release memory
+rm(nb_umi_by_barcode, scmat)
+gc()
+```
+
+## Gene complexity assessment
+
+The number of detected genes per barcode was used to identify droplets with insufficient transcriptional complexity. Low-complexity barcodes may represent empty droplets, cell debris or severely damaged cells.
+
+```{r}
+# Summarise the number of genes detected per candidate barcode
+summary(sobj$nFeature_RNA)
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+
+# Visualise the distribution of detected genes
+p_genes_hist <- ggplot(sobj@meta.data, aes(x = nFeature_RNA)) +
+  geom_histogram(bins = 200, fill = "grey70", colour = "black", linewidth = 0.1) +
+  geom_vline(xintercept = minGenes, colour = "red", linetype = "dashed") +
+  labs(title = "Detected genes per barcode", x = "Number of detected genes",
+       y = "Number of barcodes") +
+  theme_classic()
+
+p_genes_vln <- VlnPlot(sobj, features = "nFeature_RNA", pt.size = 0.01) +
+  geom_hline(yintercept = minGenes, colour = "red", linetype = "dashed") +
+  NoLegend()
+
+p_genes_hist + p_genes_vln
+```
+
+The distribution contained a large population of low-complexity barcodes, with a median of `r fmt(median(sobj$nFeature_RNA))` detected genes among the candidate barcodes. The minimum threshold of `r fmt(minGenes)` detected genes, applied to the Manual sample, was retained.
+
+No upper gene-count threshold was applied at this stage. Brain and tumour cells can exhibit high transcriptional complexity, and an arbitrary upper cut-off could remove genuine biological populations. Potential multiplets were evaluated later using `scDblFinder`.
+
+## UMI-count assessment
+
+The total UMI count per barcode provides an additional measure of RNA content. Barcodes with very low UMI counts are less likely to contain intact, transcriptionally informative cells.
+
+```{r}
+# Summarise the total number of UMIs per candidate barcode
+summary(sobj$nCount_RNA)
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+
+# Visualise the UMI-count distribution on linear and logarithmic scales
+p_umi_lin <- VlnPlot(sobj, features = "nCount_RNA", pt.size = 0.01) +
+  geom_hline(yintercept = minUmi, colour = "green", linetype = "dashed") +
+  NoLegend()
+
+p_umi_log <- VlnPlot(sobj, features = "nCount_RNA", log = TRUE, pt.size = 0.01) +
+  geom_hline(yintercept = minUmi, colour = "green", linetype = "dashed") +
+  NoLegend()
+
+p_umi_lin + p_umi_log
+```
+
+The relationship between the number of detected genes and the total UMI count was examined to identify the main complexity trend and potential extreme observations.
+
+```{r}
+# Calculate the correlation between gene and UMI counts
+gene_umi_correlation <- cor(sobj$nFeature_RNA, sobj$nCount_RNA, method = "pearson")
+gene_umi_correlation
+```
+
+```{r}
+#| fig-width: 7
+#| fig-height: 6
+
+# Visualise the gene-UMI relationship
+FeatureScatter(sobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", pt.size = 0.1) +
+  labs(title = paste0("Gene-UMI relationship (Pearson r = ",
+                      round(gene_umi_correlation, 2), ")"))
+```
+
+The two metrics were positively correlated (Pearson r = `r round(gene_umi_correlation, 2)`), as expected for droplets containing increasing amounts of cellular RNA. The minimum threshold of `r fmt(minUmi)` UMIs, applied to the Manual sample, was retained.
+
+## Filtering low-complexity barcodes
+
+Barcodes were retained when they contained more than `r fmt(minGenes)` detected genes and more than `r fmt(minUmi)` UMIs.
+
+```{r}
+# Retain barcodes satisfying both complexity criteria
+sobjFiltrd <- subset(sobj, subset = nFeature_RNA > minGenes & nCount_RNA > minUmi)
+
+# Record the number of candidate cells after gene and UMI filtering
+n_after_complexity <- ncol(sobjFiltrd)
+
+cat("Cells after gene and UMI filtering:", n_after_complexity, "\n")
+```
+
+The joint gene and UMI filtering retained `r fmt(n_after_complexity)` candidate cells.
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+
+# Inspect the distributions after complexity filtering
+VlnPlot(sobjFiltrd, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2, pt.size = 0.01)
+
+FeatureScatter(sobjFiltrd, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", pt.size = 0.1)
+```
+
+The metadata of the candidate barcodes was kept for the threshold-sensitivity analysis, and the unfiltered Seurat object was removed.
+
+```{r}
+# Keep the candidate-level metrics for the sensitivity analysis
+candidate_meta <- sobj@meta.data[, c("nFeature_RNA", "nCount_RNA", "percent_mt")]
+
+# Remove the initial object to reduce memory usage
+rm(sobj)
+gc()
+```
+
+## Mitochondrial transcript assessment
+
+An increased mitochondrial proportion can indicate damaged or dying cells, although the expected distribution depends on the tissue-processing and sequencing protocol.
+
+```{r}
+# Summarise the mitochondrial percentage
+summary(sobjFiltrd$percent_mt)
+```
+
+```{r}
+#| fig-width: 14
+#| fig-height: 5
+
+# Visualise the mitochondrial-percentage distribution
+p_mt_vln <- VlnPlot(sobjFiltrd, features = "percent_mt", pt.size = 0.01) +
+  geom_hline(yintercept = maxpct_mt, colour = "red", linetype = "dashed") +
+  NoLegend()
+
+p_mt_hist <- ggplot(sobjFiltrd@meta.data, aes(x = percent_mt)) +
+  geom_histogram(bins = 100, colour = "black", fill = "grey70") +
+  geom_vline(xintercept = maxpct_mt, colour = "red", linetype = "dashed") +
+  labs(title = "Mitochondrial transcript percentage",
+       x = "Mitochondrial transcripts (%)", y = "Number of cells") +
+  theme_classic()
+
+p_mt_vln + p_mt_hist
+```
+
+The relationship between mitochondrial percentage and total UMI count was examined to assess whether mitochondria-enriched cells also tended to have reduced RNA content.
+
+```{r}
+# Calculate the correlation between mitochondrial percentage and UMI count
+mito_umi_correlation <- cor(sobjFiltrd$percent_mt, sobjFiltrd$nCount_RNA, method = "pearson")
+mito_umi_correlation
+```
+
+```{r}
+#| fig-width: 7
+#| fig-height: 4
+
+# Visualise the mitochondrial content against the UMI count
+FeatureScatter(sobjFiltrd, feature1 = "nCount_RNA", feature2 = "percent_mt", pt.size = 0.1) +
+  labs(title = paste0("Mitochondrial content and UMI count (Pearson r = ",
+                      round(mito_umi_correlation, 2), ")"))
+```
+
+A total of `r round(100 * mean(sobjFiltrd$percent_mt < maxpct_mt), 1)`% of the candidate cells had a mitochondrial percentage below the `r maxpct_mt`% threshold applied to the Manual sample, which is appropriate for the FFPE probe-based nature of the dataset. The correlation between mitochondrial percentage and UMI count was `r round(mito_umi_correlation, 2)`.
+
+```{r}
+# Remove cells with elevated mitochondrial transcript proportions
+sobjFiltrd <- subset(sobjFiltrd, subset = percent_mt < maxpct_mt)
+
+# Record the number of cells after mitochondrial filtering
+n_after_mito <- ncol(sobjFiltrd)
+n_removed_mito <- n_after_complexity - n_after_mito
+
+cat("Cells after mitochondrial filtering:", n_after_mito, "\n")
+cat("Cells removed by mitochondrial filtering:", n_removed_mito, "\n")
+```
+
+The mitochondrial filter retained `r fmt(n_after_mito)` cells and removed `r fmt(n_removed_mito)` cells.
+
+## Threshold sensitivity
+
+The impact of the three thresholds on the number of retained cells was quantified on the candidate barcodes. The grid below varies the gene and UMI thresholds around the applied values; 3,000 UMIs corresponds to the knee position of the Manual sample. The mitochondrial threshold was kept at `r maxpct_mt`%.
+
+```{r}
+# Build the grid of alternative gene and UMI thresholds
+threshold_grid <- expand.grid(min_genes = c(600, 800, 1000),
+                              min_umi = c(1000, 2000, 3000))
+
+# Count the cells retained under each combination of thresholds
+threshold_grid$cells_retained <- mapply(
+  function(g, u) sum(candidate_meta$nFeature_RNA > g &
+                       candidate_meta$nCount_RNA > u &
+                       candidate_meta$percent_mt < maxpct_mt),
+  threshold_grid$min_genes, threshold_grid$min_umi
+)
+
+# Flag the combination applied in this workflow
+threshold_grid$applied <- threshold_grid$min_genes == minGenes &
+  threshold_grid$min_umi == minUmi
+
+threshold_grid
+```
+
+Across the grid, the number of retained cells ranged from `r fmt(min(threshold_grid$cells_retained))` to `r fmt(max(threshold_grid$cells_retained))`; the applied thresholds retained `r fmt(threshold_grid$cells_retained[threshold_grid$applied])` cells before doublet removal.
+
+## Doublet detection
+
+Droplets containing two or more cells can generate hybrid transcriptional profiles and artificial connections between otherwise distinct populations. Doublets were identified using `scDblFinder`, applied to this sample alone.
+
+The Seurat object was temporarily converted into a `SingleCellExperiment`, which is the input format expected by `scDblFinder`.
+
+```{r}
+# Convert the Seurat object into a SingleCellExperiment
+sceobj <- as.SingleCellExperiment(sobjFiltrd)
+
+# Reset the seed before the stochastic doublet-detection step
+set.seed(the.seed)
+
+# Detect putative doublets
+doublet_res <- scDblFinder(sceobj)
+```
+
+The predicted doublet classifications and scores were transferred back to the Seurat metadata.
+
+```{r}
+# Store the doublet classifications and scores in the Seurat object
+sobjFiltrd$doublets.class <- doublet_res$scDblFinder.class
+sobjFiltrd$doublets.score <- doublet_res$scDblFinder.score
+
+# Display the number and proportion of predicted singlets and doublets
+doublet_table <- table(sobjFiltrd$doublets.class)
+doublet_proportions <- round(100 * prop.table(doublet_table), 1)
+
+doublet_table
+doublet_proportions
+```
+
+```{r}
+# Record the number of predicted doublets
+n_doublets <- sum(sobjFiltrd$doublets.class == "doublet")
+doublet_percentage <- round(100 * n_doublets / ncol(sobjFiltrd), 1)
+
+cat("Predicted doublets:", n_doublets, "\n")
+cat("Predicted doublet percentage:", doublet_percentage, "%\n")
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4
+
+# Visualise the doublet-score distribution by predicted class
+ggplot(sobjFiltrd@meta.data, aes(x = doublets.score, fill = doublets.class)) +
+  geom_histogram(bins = 60, colour = "black", linewidth = 0.1) +
+  labs(title = "scDblFinder score by predicted class", x = "Doublet score",
+       y = "Number of cells", fill = "Class") +
+  theme_classic()
+```
+
+`r fmt(n_doublets)` cells (`r doublet_percentage`%) were predicted to be doublets. Predicted doublets were removed before dimensionality reduction and clustering.
+
+```{r}
+# Retain only cells classified as singlets
+sobjFiltrd <- subset(sobjFiltrd, subset = doublets.class == "singlet")
+
+# Record the final number of retained cells
+n_final_cells <- ncol(sobjFiltrd)
+
+cat("Final number of singlets:", n_final_cells, "\n")
+```
+
+The intermediate `SingleCellExperiment` objects were removed after doublet detection.
+
+```{r}
+# Remove intermediate doublet-detection objects
+rm(sceobj, doublet_res)
+gc()
+```
+
+## Final quality-control assessment
+
+The final distributions of detected genes, UMI counts and mitochondrial percentage were inspected after all filtering steps.
+
+```{r}
+# Display summary statistics for the final dataset
+summary(sobjFiltrd$nFeature_RNA)
+summary(sobjFiltrd$nCount_RNA)
+summary(sobjFiltrd$percent_mt)
+```
+
+```{r}
+#| fig-width: 14
+#| fig-height: 5
+
+# Visualise the final QC distributions
+VlnPlot(sobjFiltrd, features = c("nFeature_RNA", "nCount_RNA", "percent_mt"), ncol = 3,
+        pt.size = 0.01)
+```
+
+A summary table documents the number of barcodes or cells retained at each step of the workflow.
+
+```{r}
+# Summarise the number of barcodes or cells retained after each QC step
+qc_summary <- data.frame(
+  step = c("Raw barcodes", "Initial Seurat filtering", "Gene and UMI filtering",
+           "Mitochondrial filtering", "Doublet removal"),
+  retained_barcodes_or_cells = c(n_raw_barcodes, n_initial_cells, n_after_complexity,
+                                 n_after_mito, n_final_cells)
+)
+
+qc_summary
+```
+
+The final dataset contained `r fmt(n_final_cells)` predicted singlets and `r fmt(n_retained_genes)` retained genes. These cells passed the gene-complexity, UMI-count and mitochondrial-content filters and were not classified as doublets.
+
+## QC comparison with the Manual sample
+
+The Manual sample was processed with the same workflow and thresholds. Its filtered object was loaded in a separate environment, so that the Octo object is not overwritten, and only its cell-level metadata was retained.
+
+```{r}
+# Locate the filtered object of the Manual sample (file-name case is ignored)
+manual_file <- list.files("../data/processed_data",
+                          pattern = "^brain_DV200_FILTERED\\.rda$",
+                          ignore.case = TRUE, full.names = TRUE)
+stopifnot(length(manual_file) == 1)
+
+# Load the object in a separate environment and keep the cell-level metadata
+manual_env <- new.env()
+load(manual_file, envir = manual_env)
+manual_meta <- manual_env$sobjFiltrd@meta.data
+
+# Verify that the QC metrics are available
+metric_cols <- c("nFeature_RNA", "nCount_RNA", "percent_mt")
+stopifnot(all(metric_cols %in% colnames(manual_meta)))
+
+# Release the memory used by the Manual object
+n_manual_final <- nrow(manual_meta)
+rm(manual_env)
+gc()
+```
+
+The cell-level QC metrics of both samples were combined into a single table.
+
+```{r}
+# Combine the QC metrics of the two samples
+qc_metrics <- bind_rows(
+  Manual = manual_meta[, metric_cols],
+  Octo = sobjFiltrd@meta.data[, metric_cols],
+  .id = "sample"
+)
+qc_metrics$sample <- factor(qc_metrics$sample, levels = c("Manual", "Octo"))
+
+# Summarise the QC metrics by sample
+qc_summary_by_sample <- qc_metrics %>%
+  group_by(sample) %>%
+  summarise(cells = n(),
+            median_genes = median(nFeature_RNA), IQR_genes = IQR(nFeature_RNA),
+            median_umi = median(nCount_RNA), IQR_umi = IQR(nCount_RNA),
+            median_pct_mt = round(median(percent_mt), 2),
+            IQR_pct_mt = round(IQR(percent_mt), 2))
+
+qc_summary_by_sample
+```
+
+The distributions were compared with the Kolmogorov-Smirnov statistic D, used as an effect size (maximal distance between the two cumulative distributions, from 0 for identical distributions to 1 for fully separated ones). P-values were not used, as they are systematically significant with several thousand cells per sample.
+
+```{r}
+# Compute the Kolmogorov-Smirnov statistic for each QC metric
+ks_stats <- sapply(metric_cols, function(m) {
+  suppressWarnings(unname(ks.test(qc_metrics[[m]][qc_metrics$sample == "Manual"],
+                                  qc_metrics[[m]][qc_metrics$sample == "Octo"])$statistic))
+})
+
+round(ks_stats, 3)
+```
+
+```{r}
+#| fig-width: 14
+#| fig-height: 5
+
+# Define a violin plot function for one QC metric
+qc_violin <- function(metric, ylab, log_y = FALSE) {
+  p <- ggplot(qc_metrics, aes(x = sample, y = .data[[metric]], fill = sample)) +
+    geom_violin(scale = "width") +
+    geom_boxplot(width = 0.12, outlier.shape = NA, fill = "white") +
+    labs(x = NULL, y = ylab) +
+    theme_classic() +
+    theme(legend.position = "none")
+  if (log_y) p <- p + scale_y_log10()
+  p
+}
+
+# Compare the distributions of the three QC metrics
+qc_violin("nFeature_RNA", "Detected genes") +
+  qc_violin("nCount_RNA", "UMIs (log scale)", log_y = TRUE) +
+  qc_violin("percent_mt", "Mitochondrial transcripts (%)")
+```
+
+```{r}
+#| fig-width: 14
+#| fig-height: 4.5
+
+# Define a cumulative-distribution plot function for one QC metric
+qc_ecdf <- function(metric, xlab, log_x = FALSE) {
+  p <- ggplot(qc_metrics, aes(x = .data[[metric]], colour = sample)) +
+    stat_ecdf(linewidth = 0.8) +
+    labs(x = xlab, y = "Cumulative fraction of cells", colour = "Sample") +
+    theme_classic()
+  if (log_x) p <- p + scale_x_log10()
+  p
+}
+
+# Compare the cumulative distributions of the three QC metrics
+qc_ecdf("nFeature_RNA", "Detected genes") +
+  qc_ecdf("nCount_RNA", "UMIs (log scale)", log_x = TRUE) +
+  qc_ecdf("percent_mt", "Mitochondrial transcripts (%)") +
+  plot_layout(guides = "collect")
+```
+
+The number of cells retained at each step was compared between the two samples. The first two steps of the Manual sample were taken from its QC report, and its final count was read from its filtered object.
+
+```{r}
+# Compare the QC funnel of the two samples
+manual_funnel <- c(candidates = 10306, after_filters = 4278, final = n_manual_final)
+octo_funnel <- c(candidates = n_initial_cells, after_filters = n_after_mito,
+                 final = n_final_cells)
+
+funnel_comparison <- data.frame(
+  step = c("Barcodes with at least 200 genes",
+           "After gene, UMI and mitochondrial filters",
+           "After doublet removal (final)"),
+  Manual = manual_funnel,
+  Octo = octo_funnel,
+  row.names = NULL
+)
+
+# Add the doublet rate and the fraction of Cell Ranger cells retained
+funnel_extra <- data.frame(
+  step = c("Predicted doublets (% of filtered cells)",
+           "Final cells (% of Cell Ranger cells)"),
+  Manual = round(c(100 * (1 - manual_funnel[["final"]] / manual_funnel[["after_filters"]]),
+                   100 * manual_funnel[["final"]] / cellranger_cells[["Manual"]]), 1),
+  Octo = round(c(100 * (1 - octo_funnel[["final"]] / octo_funnel[["after_filters"]]),
+                 100 * octo_funnel[["final"]] / cellranger_cells[["Octo"]]), 1)
+)
+
+funnel_comparison
+funnel_extra
+```
+
+The Octo sample retained `r fmt(n_final_cells)` cells and the Manual sample `r fmt(n_manual_final)` cells. The median number of detected genes was `r fmt(qc_summary_by_sample$median_genes[qc_summary_by_sample$sample == "Octo"])` for the Octo sample and `r fmt(qc_summary_by_sample$median_genes[qc_summary_by_sample$sample == "Manual"])` for the Manual sample, and the median number of UMIs was `r fmt(qc_summary_by_sample$median_umi[qc_summary_by_sample$sample == "Octo"])` and `r fmt(qc_summary_by_sample$median_umi[qc_summary_by_sample$sample == "Manual"])`, respectively. The Kolmogorov-Smirnov statistics were `r round(ks_stats[["nFeature_RNA"]], 2)` for detected genes, `r round(ks_stats[["nCount_RNA"]], 2)` for UMIs and `r round(ks_stats[["percent_mt"]], 2)` for the mitochondrial percentage.
+
+## Normalisation
+
+The retained count matrix was normalised using Seurat's `LogNormalize` method, as for the Manual sample. For each cell, gene counts were divided by the total cellular count, multiplied by the default scale factor of 10,000 and log-transformed. `SCTransform` is a possible alternative, but it requires more computational resources since it fits generalised linear models to adjust the residuals.
+
+```{r}
+# Normalise gene expression while preserving the raw counts
+sobjFiltrd <- NormalizeData(
+  object = sobjFiltrd,
+  normalization.method = "LogNormalize",
+  scale.factor = 10000,
+  verbose = FALSE
+)
+```
+
+Raw counts remained available in the `counts` layer, while the normalised expression values were stored in the `data` layer.
+
+```{r}
+# Verify the RNA layers present after normalisation
+Layers(sobjFiltrd[["RNA"]])
+```
+
+Sample labels were added to the cell metadata for the joint analysis of the two samples.
+
+```{r}
+# Add the sample and dissociation-method labels
+sobjFiltrd$sample <- sample_label
+sobjFiltrd$dissociation <- "gentleMACS Octo"
+
+table(sobjFiltrd$sample)
+```
+
+## Saving the filtered object
+
+The filtered and normalised Seurat object was saved for the integration analysis. It keeps the object name `sobjFiltrd` used for the Manual sample; the two objects are therefore loaded into separate environments in the integration document.
+
+```{r}
+# Define the output path
+filtered_output_file <- paste0("../data/processed_data/", sample.name, "_FILTERED.rda")
+
+# Save the filtered and normalised Seurat object
+save(sobjFiltrd, file = filtered_output_file)
+
+cat("Filtered object saved to:", filtered_output_file, "\n")
+```
+
+```{r}
+# Record the software versions used in the analysis
+sessionInfo()
+```
