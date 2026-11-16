@@ -7,3 +7,4 @@ data/gbmap_core/
 code/Rplots.pdf
 # large or regenerated outputs
 data/infercnv_out/
+data/processed_data/

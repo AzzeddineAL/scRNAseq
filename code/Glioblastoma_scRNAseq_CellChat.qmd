@@ -66,8 +66,10 @@ table(cc_obj$cellchat_group)
 We use the secreted, ECM-receptor and cell-cell contact interactions (`subsetDB` removes the "Non-protein Signaling" part by default). `future::plan("sequential")` avoids parallel problems on Windows.
 
 ```{r}
-cellchat <- createCellChat(object = GetAssayData(cc_obj, layer = "data"),
-                           meta = cc_obj@meta.data, group.by = "cellchat_group")
+cc_obj <- NormalizeData(cc_obj, assay = "RNA")
+data_matrix <- GetAssayData(cc_obj, assay = "RNA", layer = "data")
+cellchat <- createCellChat(object = data_matrix, meta = cc_obj@meta.data, group.by = "cellchat_group")
+
 cellchat@DB <- subsetDB(CellChatDB.human)
 
 future::plan("sequential")

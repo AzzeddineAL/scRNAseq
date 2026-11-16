@@ -1,0 +1,671 @@
+---
+title: "Glioblastoma scRNA-seq - Integration of the Manual and Octo Samples"
+subtitle: "Glioblastoma FFPE Tissue Dissociated Manually or with the gentleMACS Octo Dissociator"
+format: html
+editor: visual
+---
+
+## Integration of the Manual and Octo samples
+
+### Analysis setup
+
+The two glioblastoma samples originate from the same donor and FFPE specimen and were processed with the same probe panel, in the same GEM lane and with the same Cell Ranger version. The dissociation method (manual or gentleMACS Octo) is therefore the only experimental difference between them, and the samples behave as two technical replicates of the same tumour.
+
+Integration is not always necessary. The samples were first processed jointly without integration. If the clusters separate cells by biology rather than by sample, integration is not required; if they separate cells by sample, the embeddings are aligned before the clustering is repeated. Several integration methods were then compared with metrics fixed in advance, and the unintegrated embedding was retained as a candidate. A difference in cell-type composition between the samples was documented before integration, because it may reflect the dissociation method and must not be removed by the correction.
+
+Integration corrects the low-dimensional embedding used for the neighbour graph, the clustering and the UMAP. It does not modify the expression values: scores, differential expression and cell-cell communication are computed on the normalised expression of the `RNA` assay.
+
+```{r}
+# Define the sample labels and the species
+sample_labels <- c("Manual", "Octo")
+species <- "Human"
+
+# Set a fixed random seed for reproducibility
+the.seed <- 42
+set.seed(the.seed)
+
+# Load the packages required for the joint analysis
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(SeuratObject)
+  library(dplyr)
+  library(ggplot2)
+  library(patchwork)
+  library(harmony)
+  library(cluster)
+})
+```
+
+The `harmony` package must be installed once.
+
+```{r}
+#| eval: false
+install.packages("harmony")
+```
+
+The parameters of the joint analysis follow those of the Manual pipeline (2,000 variable genes, 20 principal components, clustering resolution of 0.2). The tolerances used to select the embedding were defined here, before any metric was computed.
+
+```{r}
+# Joint-analysis parameters, identical to those of the Manual pipeline
+n_pcs <- 20
+n_hvg <- 2000
+cluster_res <- 0.2
+
+# Number of neighbours used for the LISI metrics
+k_lisi <- 90
+
+# Selection rule: maximal loss of biological conservation tolerated, and
+# minimal gain in sample mixing required to prefer an integrated embedding
+tol_bio <- 0.05
+min_gain_mixing <- 0.05
+
+# Format numbers consistently in the text
+fmt <- function(x) format(x, big.mark = ",", scientific = FALSE, trim = TRUE)
+```
+
+### Utility functions
+
+These functions summarise and visualise the distribution of the samples (or of the cell types) within clusters.
+
+```{r}
+# Count the cells of each group in each cluster and compute their frequencies
+summarize_clusters_by_group <- function(seurat_obj, cluster_column_name, batch_column_name) {
+  seurat_obj[[]] %>%
+    dplyr::count(
+      cluster = .data[[cluster_column_name]],
+      batch = .data[[batch_column_name]],
+      name = "cell_count"
+    ) %>%
+    dplyr::group_by(cluster) %>%
+    dplyr::mutate(freq = cell_count / sum(cell_count)) %>%
+    dplyr::ungroup()
+}
+
+# Plot the number of cells per cluster, coloured by group
+plot_cluster_sample <- function(cluster_summary_df, overall_title) {
+  ggplot(cluster_summary_df, aes(x = cluster, y = cell_count, fill = batch)) +
+    geom_bar(stat = "identity", position = "stack") +
+    labs(x = "Cluster", y = "Number of cells", fill = "Group") +
+    ggtitle(overall_title) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+
+# Plot the frequency of each group in each cluster
+plot_cluster_freq <- function(cluster_summary_df, overall_title) {
+  ggplot(cluster_summary_df, aes(x = cluster, y = freq, fill = batch)) +
+    geom_bar(stat = "identity", position = "fill") +
+    labs(x = "Cluster", y = "Group frequency", fill = "Group") +
+    ggtitle(overall_title) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+```
+
+## Loading the Manual and Octo objects
+
+The filtered and normalised objects of the two samples were loaded into separate environments, because both are saved under the name `sobjFiltrd`. The annotated Manual object provides the cell-type labels.
+
+```{r}
+# Load a saved Seurat object into a separate environment and return it
+load_seurat <- function(pattern) {
+  f <- list.files("../data/processed_data", pattern = pattern,
+                  ignore.case = TRUE, full.names = TRUE)
+  stopifnot(length(f) == 1)
+  e <- new.env()
+  load(f, envir = e)
+  e$sobjFiltrd
+}
+
+manual <- load_seurat("^brain_DV200_FILTERED\\.rda$")
+manual_ann <- load_seurat("^brain_DV200_ANNOTATED\\.rda$")
+octo <- load_seurat("^brain_octo_FILTERED\\.rda$")
+```
+
+The annotated Manual object must contain the same cells as the filtered Manual object, so that the labels correspond to the cells that are integrated.
+
+```{r}
+# Verify that the annotation corresponds to the current filtered Manual object
+if (!setequal(colnames(manual), colnames(manual_ann))) {
+  stop("The annotated and filtered Manual objects contain different cells: ",
+       "re-run the Manual pipeline from the QC document.")
+}
+
+# Label the samples and the dissociation methods
+manual$sample <- "Manual"
+manual$dissociation <- "Manual"
+
+data.frame(sample = c("Manual", "Octo"), cells = c(ncol(manual), ncol(octo)),
+           genes = c(nrow(manual), nrow(octo)))
+```
+
+## Annotation of the Octo cells by label transfer
+
+The Manual cell types were transferred to the Octo cells through anchors computed in the principal-component space of the Manual object. The transfer is independent of the integration methods, so the same labels were used to evaluate all of them. The prediction score quantifies the confidence of each assignment.
+
+```{r}
+# Set the default assay of both objects
+DefaultAssay(manual_ann) <- "RNA"
+DefaultAssay(octo) <- "RNA"
+
+# Find the transfer anchors between the Manual reference and the Octo query
+transfer_anchors <- FindTransferAnchors(
+  reference = manual_ann,
+  query = octo,
+  dims = 1:n_pcs,
+  reference.reduction = "pca",
+  normalization.method = "LogNormalize",
+  verbose = FALSE
+)
+
+# Transfer the Manual cell types to the Octo cells
+manual_labels <- setNames(as.character(manual_ann$celltype), colnames(manual_ann))
+transfer_pred <- TransferData(
+  anchorset = transfer_anchors,
+  refdata = manual_labels,
+  dims = 1:n_pcs,
+  verbose = FALSE
+)
+
+# Store the predicted labels and their confidence in the Octo object
+octo$celltype_transfer <- transfer_pred$predicted.id
+octo$transfer_score <- transfer_pred$prediction.score.max
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4
+
+# Distribution of the prediction scores
+ggplot(octo@meta.data, aes(x = transfer_score)) +
+  geom_histogram(bins = 50, fill = "grey70", colour = "black", linewidth = 0.1) +
+  labs(title = "Confidence of the label transfer to the Octo cells",
+       x = "Maximal prediction score", y = "Number of cells") +
+  theme_classic()
+
+# Number of Octo cells and median confidence per transferred label
+octo@meta.data %>%
+  group_by(celltype_transfer) %>%
+  summarise(cells = n(), median_score = round(median(transfer_score), 2)) %>%
+  arrange(desc(cells))
+```
+
+A total of `r round(100 * mean(octo$transfer_score >= 0.8), 1)`% of the Octo cells were assigned with a prediction score of at least 0.8, and the median score was `r round(median(octo$transfer_score), 2)`.
+
+## Merging the samples
+
+The two objects were merged, the layers were joined and then split by sample, which is the layout required by `IntegrateLayers`. The Manual labels and the transferred Octo labels were stored in a single `celltype` column, and their origin was recorded.
+
+```{r}
+# Merge the two samples, prefixing the cell names with the sample label
+sobj <- merge(manual, y = octo, add.cell.ids = sample_labels, project = "GBM_Manual_Octo")
+
+# Join the layers, then split them by sample
+sobj <- JoinLayers(sobj)
+sobj[["RNA"]] <- split(sobj[["RNA"]], f = sobj$sample)
+Layers(sobj[["RNA"]])
+```
+
+```{r}
+# Combine the Manual annotation and the Octo transferred labels
+labels_manual <- setNames(manual_labels, paste0("Manual_", names(manual_labels)))
+labels_octo <- setNames(octo$celltype_transfer, paste0("Octo_", colnames(octo)))
+all_labels <- c(labels_manual, labels_octo)
+
+sobj$celltype <- unname(all_labels[colnames(sobj)])
+sobj$label_source <- ifelse(sobj$sample == "Manual", "annotation", "transfer")
+
+# Verify that every cell has a label
+stopifnot(!anyNA(sobj$celltype))
+table(sobj$sample, sobj$label_source)
+```
+
+The merged object contained `r fmt(ncol(sobj))` cells (`r fmt(sum(sobj$sample == "Manual"))` Manual and `r fmt(sum(sobj$sample == "Octo"))` Octo) and `r fmt(nrow(sobj))` genes.
+
+```{r}
+# Remove the individual objects that are no longer needed
+rm(manual, octo, manual_ann, transfer_anchors, transfer_pred)
+gc()
+```
+
+## Composition of the samples before integration
+
+The cell-type composition of each sample was documented before any correction. A difference in composition can reflect the dissociation method, which may recover some cell types more efficiently than others. Such a difference is a result in itself and is not a batch effect to be removed. The Octo composition relies on transferred labels and is provisional until the independent annotation of the comparison document.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 5
+
+# Proportion of each cell type within each sample
+ggplot(sobj@meta.data, aes(x = sample, fill = celltype)) +
+  geom_bar(position = "fill") +
+  labs(x = "Sample", y = "Proportion of cells", fill = "Cell type") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal()
+```
+
+```{r}
+# Counts and percentages of cells per cell type and sample
+composition_counts <- table(sobj$celltype, sobj$sample)
+composition_pct <- round(100 * prop.table(composition_counts, margin = 2), 1)
+colnames(composition_pct) <- paste0(colnames(composition_pct), " (%)")
+
+cbind(unclass(composition_counts), unclass(composition_pct))
+```
+
+## Joint processing without integration
+
+The joint processing followed the Manual pipeline: normalisation of each layer, selection of `r fmt(n_hvg)` variable genes, scaling and principal-component analysis. Variable genes were selected for each sample and combined across layers.
+
+```{r}
+# Normalise each layer independently
+sobj <- NormalizeData(sobj, normalization.method = "LogNormalize",
+                      scale.factor = 10000, verbose = FALSE)
+
+# Select the variable genes across the two samples
+sobj <- FindVariableFeatures(sobj, selection.method = "vst", nfeatures = n_hvg,
+                             verbose = FALSE)
+
+# Scale the variable genes of each layer
+sobj <- ScaleData(sobj, verbose = FALSE)
+```
+
+The number of principal components was inspected on the joint dataset, then fixed to the value used for the Manual sample.
+
+```{r}
+#| fig-width: 7
+#| fig-height: 4
+
+# Compute 50 principal components to inspect the elbow plot
+sobj <- RunPCA(sobj, npcs = 50, verbose = FALSE)
+ElbowPlot(sobj, ndims = 50) +
+  geom_vline(xintercept = n_pcs, colour = "red", linetype = "dashed")
+```
+
+```{r}
+# Recompute the principal components retained for the integration and the clustering
+sobj <- RunPCA(sobj, npcs = n_pcs, verbose = FALSE)
+```
+
+### Clustering and batch assessment without integration
+
+The clusters of the unintegrated embedding were examined with respect to the sample. The graph, the clusters and the UMAP of each embedding were computed by the same function, so that all methods are treated identically.
+
+```{r}
+# Build the neighbour graph, the clusters and the UMAP of one embedding
+cluster_embedding <- function(obj, reduction, tag, n_dims, res) {
+  d <- 1:min(n_dims, ncol(Embeddings(obj, reduction)))
+  graph_names <- paste0(tag, c("_nn", "_snn"))
+
+  obj <- FindNeighbors(obj, reduction = reduction, dims = d,
+                       graph.name = graph_names, verbose = FALSE)
+  obj <- FindClusters(obj, graph.name = graph_names[2], resolution = res,
+                      cluster.name = paste0("clusters_", tag), verbose = FALSE)
+  obj <- RunUMAP(obj, reduction = reduction, dims = d,
+                 reduction.name = paste0("umap_", tag),
+                 reduction.key = paste0("UMAP", tag, "_"), verbose = FALSE)
+  obj
+}
+
+# Cluster the unintegrated principal-component embedding
+sobj <- cluster_embedding(sobj, reduction = "pca", tag = "unintegrated",
+                          n_dims = n_pcs, res = cluster_res)
+```
+
+```{r}
+#| fig-width: 14
+#| fig-height: 5
+
+# Visualise the unintegrated embedding by cluster, sample and cell type
+p1 <- DimPlot(sobj, reduction = "umap_unintegrated", group.by = "clusters_unintegrated",
+              label = TRUE) + ggtitle("Cluster")
+p2 <- DimPlot(sobj, reduction = "umap_unintegrated", group.by = "sample") + ggtitle("Sample")
+p3 <- DimPlot(sobj, reduction = "umap_unintegrated", group.by = "celltype") +
+  ggtitle("Cell type")
+p1 + p2 + p3
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+
+# Distribution of the samples within the unintegrated clusters
+cluster_sample_df <- summarize_clusters_by_group(sobj, "clusters_unintegrated", "sample")
+
+plot_cluster_sample(cluster_sample_df, "Sample distribution") +
+  plot_cluster_freq(cluster_sample_df, "Sample frequency")
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+# Distribution of the cell types within the unintegrated clusters
+cluster_celltype_df <- summarize_clusters_by_group(sobj, "clusters_unintegrated", "celltype")
+plot_cluster_freq(cluster_celltype_df, "Cell-type frequency per unintegrated cluster")
+```
+
+## Integration methods
+
+Three integration approaches were applied to the principal-component embedding of the joint dataset, each producing a corrected low-dimensional embedding:
+
+-   **Harmony** iteratively adjusts the position of the cells in the embedding with a soft clustering and a diversity penalty (`theta`); it was applied through the Seurat wrapper and through the standalone package.
+-   **RPCA** aligns the samples with anchors found in reciprocal principal-component spaces, a conservative approach when populations are not fully shared.
+-   **CCA** aligns the samples with anchors found in a canonical-correlation space, a stronger correction with a higher risk of over-correction.
+
+Harmony was additionally run with three values of `theta` (1, 2 and 4) to document how the strength of the correction affects sample mixing and the conservation of the biology. All methods were run with their default parameters, on the same `r n_pcs` principal components.
+
+```{r}
+# Harmony through the Seurat wrapper (default parameters)
+sobj <- IntegrateLayers(object = sobj, method = HarmonyIntegration,
+                        orig.reduction = "pca", new.reduction = "harmony",
+                        verbose = FALSE)
+
+# Reciprocal PCA anchors
+sobj <- IntegrateLayers(object = sobj, method = RPCAIntegration,
+                        orig.reduction = "pca", new.reduction = "integrated.rpca",
+                        dims = 1:n_pcs, verbose = FALSE)
+
+# Canonical-correlation anchors
+sobj <- IntegrateLayers(object = sobj, method = CCAIntegration,
+                        orig.reduction = "pca", new.reduction = "integrated.cca",
+                        dims = 1:n_pcs, verbose = FALSE)
+
+names(sobj@reductions)
+```
+
+The standalone Harmony package requires joined layers. It was applied to a temporary joined copy of the object, and only the corrected embeddings were transferred back.
+
+```{r}
+# Run the standalone Harmony for several values of theta
+sobj_joined <- JoinLayers(sobj)
+
+harmony_theta <- c(1, 2, 4)
+for (th in harmony_theta) {
+  red_name <- paste0("harmony.theta", th)
+
+  sobj_h <- harmony::RunHarmony(
+    object = sobj_joined,
+    group.by.vars = "sample",
+    reduction.use = "pca",
+    dims.use = 1:n_pcs,
+    theta = th,
+    reduction.save = "harmony_tmp",
+    max_iter = 100,
+    verbose = FALSE
+  )
+
+  # Transfer the corrected embedding to the main object
+  sobj[[red_name]] <- CreateDimReducObject(
+    embeddings = Embeddings(sobj_h, "harmony_tmp"),
+    key = paste0("HarmonyTheta", th, "_"),
+    assay = DefaultAssay(sobj)
+  )
+}
+
+# Remove the temporary objects
+rm(sobj_joined, sobj_h)
+gc()
+
+names(sobj@reductions)
+```
+
+### Clustering on the integrated embeddings
+
+Each corrected embedding was clustered with the function used for the unintegrated embedding.
+
+```{r}
+# Summary of the embeddings compared
+methods_tbl <- data.frame(
+  method = c("Unintegrated", "Harmony (Seurat)", "RPCA", "CCA",
+             "Harmony theta 1", "Harmony theta 2", "Harmony theta 4"),
+  reduction = c("pca", "harmony", "integrated.rpca", "integrated.cca",
+                "harmony.theta1", "harmony.theta2", "harmony.theta4"),
+  tag = c("unintegrated", "harmony", "rpca", "cca",
+          "harmonyt1", "harmonyt2", "harmonyt4"),
+  stringsAsFactors = FALSE
+)
+
+# Cluster each integrated embedding (the unintegrated one is already done)
+for (i in seq_len(nrow(methods_tbl))) {
+  if (methods_tbl$tag[i] == "unintegrated") next
+  sobj <- cluster_embedding(sobj, reduction = methods_tbl$reduction[i],
+                            tag = methods_tbl$tag[i], n_dims = n_pcs, res = cluster_res)
+}
+
+methods_tbl$cluster_column <- paste0("clusters_", methods_tbl$tag)
+methods_tbl$umap <- paste0("umap_", methods_tbl$tag)
+methods_tbl
+```
+
+## Evaluation of the integration
+
+The methods were evaluated on two complementary criteria, computed on the same `r n_pcs` dimensions and with the same labels.
+
+**Mixing of the samples** (the correction should remove the technical difference):
+
+-   *iLISI* is the inverse Simpson index of the sample composition among the `r k_lisi` nearest neighbours of each cell. It was rescaled from 0 (neighbourhoods containing a single sample) to 1 (neighbourhoods containing both samples in equal proportions).
+-   *Cluster deviation* is the mean absolute difference, weighted by cluster size, between the fraction of Octo cells in a cluster and the fraction of Octo cells in the whole dataset; 0 corresponds to a perfect mixing.
+
+**Conservation of the biology** (the correction should not merge distinct cell types):
+
+-   *cLISI purity* is the inverse Simpson index of the cell-type composition among the nearest neighbours, rescaled from 0 (neighbourhoods containing all the cell types) to 1 (neighbourhoods containing a single cell type).
+-   *ARI* is the adjusted Rand index between the clusters and the Manual annotation, computed on the Manual cells only, which are the only cells carrying an annotation rather than a transferred label.
+-   *Silhouette* is the mean silhouette width of the cell types, averaged over the cell types, on a random subset of 2,000 cells.
+
+The LISI metrics were computed with a nearest-neighbour implementation with uniform weights, a simplified version of the original LISI that does not require an additional package.
+
+```{r}
+# Inverse Simpson index of the label composition among the k nearest neighbours
+knn_lisi <- function(embedding, labels, k = 90) {
+  nn <- RANN::nn2(embedding, k = k + 1)$nn.idx[, -1, drop = FALSE]
+  lab <- as.integer(factor(labels))
+  n_lab <- max(lab)
+
+  vapply(seq_len(nrow(nn)), function(i) {
+    p <- tabulate(lab[nn[i, ]], nbins = n_lab) / k
+    1 / sum(p^2)
+  }, numeric(1))
+}
+
+# Adjusted Rand index between two partitions
+adjusted_rand_index <- function(x, y) {
+  tab <- table(x, y)
+  n <- sum(tab)
+  sum_comb <- function(v) sum(choose(v, 2))
+
+  index <- sum_comb(tab)
+  sum_rows <- sum_comb(rowSums(tab))
+  sum_cols <- sum_comb(colSums(tab))
+  expected <- sum_rows * sum_cols / choose(n, 2)
+
+  (index - expected) / ((sum_rows + sum_cols) / 2 - expected)
+}
+```
+
+```{r}
+# Define the cells used for the silhouette and the Manual cells used for the ARI
+set.seed(the.seed)
+silhouette_cells <- sample(ncol(sobj), min(2000, ncol(sobj)))
+is_manual <- sobj$sample == "Manual"
+
+n_samples <- length(unique(sobj$sample))
+n_labels <- length(unique(sobj$celltype))
+
+# Evaluate one embedding
+evaluate_embedding <- function(obj, reduction, cluster_column, n_dims) {
+  d <- 1:min(n_dims, ncol(Embeddings(obj, reduction)))
+  emb <- Embeddings(obj, reduction)[, d, drop = FALSE]
+  clusters <- obj@meta.data[[cluster_column]]
+
+  # Mixing of the samples
+  ilisi <- knn_lisi(emb, obj$sample, k = k_lisi)
+  tab <- table(clusters, obj$sample)
+  frac_octo <- tab[, "Octo"] / rowSums(tab)
+  p_global <- mean(obj$sample == "Octo")
+  cluster_deviation <- sum(rowSums(tab) * abs(frac_octo - p_global)) / sum(tab)
+
+  # Conservation of the biology
+  clisi <- knn_lisi(emb, obj$celltype, k = k_lisi)
+  ari <- adjusted_rand_index(clusters[is_manual], obj$celltype[is_manual])
+  lab_int <- as.integer(factor(obj$celltype[silhouette_cells]))
+  sil <- silhouette(lab_int, dist(emb[silhouette_cells, , drop = FALSE]))
+  sil_width <- mean(tapply(sil[, "sil_width"], lab_int, mean))
+
+  data.frame(
+    n_clusters = length(unique(clusters)),
+    ilisi_norm = (mean(ilisi) - 1) / (n_samples - 1),
+    cluster_deviation = cluster_deviation,
+    clisi_purity = (n_labels - mean(clisi)) / (n_labels - 1),
+    ari_manual = ari,
+    silhouette = sil_width
+  )
+}
+
+# Evaluate all embeddings
+metrics_list <- lapply(seq_len(nrow(methods_tbl)), function(i) {
+  evaluate_embedding(sobj, methods_tbl$reduction[i], methods_tbl$cluster_column[i], n_pcs)
+})
+
+metrics_tbl <- cbind(method = methods_tbl$method, do.call(rbind, metrics_list))
+metrics_tbl[, -1] <- round(metrics_tbl[, -1], 3)
+metrics_tbl
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4.5
+
+# Visualise the mixing and the conservation of each method
+metrics_plot <- metrics_tbl %>%
+  mutate(method = factor(method, levels = method))
+
+p_mix <- ggplot(metrics_plot, aes(x = method, y = ilisi_norm, fill = method)) +
+  geom_col() +
+  labs(title = "Mixing of the samples (iLISI)", x = NULL, y = "Normalised iLISI") +
+  theme_classic() +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+
+p_bio <- ggplot(metrics_plot, aes(x = method, y = clisi_purity, fill = method)) +
+  geom_col() +
+  labs(title = "Conservation of the cell types (cLISI purity)", x = NULL, y = "cLISI purity") +
+  theme_classic() +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+
+p_mix + p_bio
+```
+
+## Visual assessment
+
+The UMAP of each embedding was coloured by sample and by cell type. Well-integrated samples overlap within each cell type, while the cell types remain separated.
+
+```{r}
+#| fig-width: 12
+#| fig-height: 13
+
+# Plot the sample and the cell types on the UMAP of one method
+plot_method_umap <- function(i) {
+  list(
+    DimPlot(sobj, reduction = methods_tbl$umap[i], group.by = "sample") +
+      ggtitle(paste(methods_tbl$method[i], "- sample")),
+    DimPlot(sobj, reduction = methods_tbl$umap[i], group.by = "celltype") +
+      ggtitle(paste(methods_tbl$method[i], "- cell type"))
+  )
+}
+
+# Unintegrated, Harmony, RPCA and CCA
+wrap_plots(unlist(lapply(1:4, plot_method_umap), recursive = FALSE), ncol = 2)
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+
+# Harmony with the three values of theta
+wrap_plots(unlist(lapply(5:7, plot_method_umap), recursive = FALSE), ncol = 2)
+```
+
+## Selection of the embedding
+
+The embedding was selected with the rule defined before the analysis. An integrated embedding was eligible if it conserved the biology, with a cLISI purity and an ARI within `r tol_bio` of the unintegrated embedding, and if it improved the iLISI by at least `r min_gain_mixing`. Among the eligible embeddings, the one with the highest iLISI was retained. If no integrated embedding was eligible, the unintegrated embedding was retained.
+
+```{r}
+# Apply the selection rule
+baseline <- metrics_tbl[metrics_tbl$method == "Unintegrated", ]
+
+eligible <- metrics_tbl %>%
+  filter(method != "Unintegrated",
+         clisi_purity >= baseline$clisi_purity - tol_bio,
+         ari_manual >= baseline$ari_manual - tol_bio,
+         ilisi_norm >= baseline$ilisi_norm + min_gain_mixing)
+
+selected_method <- if (nrow(eligible) == 0) "Unintegrated" else
+  eligible$method[which.max(eligible$ilisi_norm)]
+
+selected_row <- methods_tbl[methods_tbl$method == selected_method, ]
+selected_reduction <- selected_row$reduction
+
+eligible
+cat("Selected embedding:", selected_method, "\n")
+```
+
+The unintegrated embedding had a normalised iLISI of `r baseline$ilisi_norm`. The retained embedding was **`r selected_method`**, with a normalised iLISI of `r metrics_tbl$ilisi_norm[metrics_tbl$method == selected_method]`, a cLISI purity of `r metrics_tbl$clisi_purity[metrics_tbl$method == selected_method]` and an ARI of `r metrics_tbl$ari_manual[metrics_tbl$method == selected_method]`.
+
+The distribution of the samples within the clusters of the retained embedding was examined as for the unintegrated embedding.
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+
+# Distribution of the samples within the clusters of the retained embedding
+selected_cluster_df <- summarize_clusters_by_group(sobj, selected_row$cluster_column, "sample")
+
+plot_cluster_sample(selected_cluster_df, paste("Sample distribution -", selected_method)) +
+  plot_cluster_freq(selected_cluster_df, paste("Sample frequency -", selected_method))
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+# Distribution of the cell types within the clusters of the retained embedding
+selected_celltype_df <- summarize_clusters_by_group(sobj, selected_row$cluster_column,
+                                                    "celltype")
+plot_cluster_freq(selected_celltype_df,
+                  paste("Cell-type frequency per cluster -", selected_method))
+```
+
+### Scope and limits of the evaluation
+
+This evaluation compares embeddings obtained from two technical replicates of the same specimen, so it measures the sensitivity of the analysis to the dissociation method and not to a difference between patients. The conservation metrics rely on the Manual annotation and on the labels transferred to the Octo cells; the independent annotation of the Octo cells with the marker panel of the Manual sample is performed in the comparison document, and the agreement between the two annotations is reported there. The silhouette was computed on a subset of 2,000 cells with a fixed seed.
+
+## Saving the integrated object
+
+The layers were joined for the downstream analyses, which use the normalised expression of the `RNA` assay. The corrected embeddings, the clusters and the UMAPs of all methods were kept in the object, together with the retained embedding. The metrics table was saved for the comparison document.
+
+```{r}
+# Join the layers for the downstream analyses
+sobjIntegrated <- JoinLayers(sobj)
+
+# Store the integration summary with the object
+Misc(sobjIntegrated, slot = "integration") <- list(
+  selected_method = selected_method,
+  selected_reduction = selected_reduction,
+  selected_tag = selected_row$tag,
+  n_pcs = n_pcs,
+  cluster_resolution = cluster_res
+)
+
+# Save the integrated object and the metrics
+integrated_output_file <- "../data/processed_data/brain_manual_octo_INTEGRATED.rda"
+save(sobjIntegrated, file = integrated_output_file)
+write.csv(metrics_tbl, "../data/processed_data/integration_metrics.csv", row.names = FALSE)
+
+cat("Integrated object saved to:", integrated_output_file, "\n")
+```
+
+```{r}
+# Record the software versions used in the analysis
+sessionInfo()
+```

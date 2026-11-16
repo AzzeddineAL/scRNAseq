@@ -15,6 +15,10 @@ A fixed random seed was used to improve reproducibility.
 the.seed <- 42
 set.seed(the.seed)
 
+
+Sys.setenv(JAGS_HOME="C:/Program Files/JAGS/JAGS-4.3.2")
+
+
 # Load the packages required for CNV inference and visualisation
 suppressPackageStartupMessages({
   library(Seurat)
@@ -193,25 +197,25 @@ knitr::include_graphics("../data/infercnv_out/infercnv.png")
 
 **Observations on the heatmap**
 
-- The reference populations (cells on top) display relatively flat profiles as expected: no region is consistently red or blue.
+-   The reference populations (cells on top) display relatively flat profiles as expected: no region is consistently red or blue.
 
-- **Tumour NPC-like and Tumour MES-like cells populations show the classic glioblastoma signature** : a gain of chr7 (red) and a loss of chr10 (blue), present in most of the cells.
+-   **Tumour NPC-like and Tumour MES-like cells populations show the classic glioblastoma signature** : a gain of chr7 (red) and a loss of chr10 (blue), present in most of the cells.
 
-- Other alterations are shared by the tumour cells : a short and strong gain on **chr12** and a loss of **chr13**. A loss on **chr11** is only seen in a part of the NPC-like cells, which could be a subclone.
+-   Other alterations are shared by the tumour cells : a short and strong gain on **chr12** and a loss of **chr13**. A loss on **chr11** is only seen in a part of the NPC-like cells, which could be a subclone.
 
-- The neurons are not flat (red on chrX, chr16, chr20), but chr7 and chr10 are normal. This is most likely an artefact : neurons are not in the reference, so groups of neuron-specific genes located close to each other on a chromosome look like CNVs.
+-   The neurons are not flat (red on chrX, chr16, chr20), but chr7 and chr10 are normal. This is most likely an artefact : neurons are not in the reference, so groups of neuron-specific genes located close to each other on a chromosome look like CNVs.
 
 ## Calculation of per-cell CNV scores
 
 The processed inferCNV matrix is centred approximately around one. For each cell, three complementary scores were calculated:
 
-- `cnv_score`: mean squared deviation from the neutral baseline (mean squared deviation from 1): high when the cell has many alterations
+-   `cnv_score`: mean squared deviation from the neutral baseline (mean squared deviation from 1): high when the cell has many alterations
 
-- `chr7`: mean inferred value across chromosome 7;
+-   `chr7`: mean inferred value across chromosome 7;
 
-- `chr10`: mean inferred value across chromosome 10;
+-   `chr10`: mean inferred value across chromosome 10;
 
-- `chr7_minus_chr10`: contrast between the chr7 and chr10 signals.
+-   `chr7_minus_chr10`: contrast between the chr7 and chr10 signals.
 
 ```{r}
 # Extract the processed expression matrix from the inferCNV object
@@ -274,9 +278,9 @@ ggplot(sobjFiltrd@meta.data, aes(x = chr10, y = chr7, colour = celltype)) + geom
 
 **Observations**
 
-- The tumour cells form a distinct group in the top-left corner (chr7-high, chr10-low), whereas most immune, vascular and normal neural populations remained near the neutral point.
+-   The tumour cells form a distinct group in the top-left corner (chr7-high, chr10-low), whereas most immune, vascular and normal neural populations remained near the neutral point.
 
-- The gap between the two groups is fairly clean, so a threshold on chr7 - chr10 is a reasonable way to classify the cells. Cells close to the threshold can go either way.
+-   The gap between the two groups is fairly clean, so a threshold on chr7 - chr10 is a reasonable way to classify the cells. Cells close to the threshold can go either way.
 
 ## Operational classification of malignant cells
 
@@ -342,21 +346,21 @@ knitr::kable(cnv_summary,col.names = c(
 
 In the current dataset:
 
-- **97.4% of the NPC-like tumour cluster was classified as malignant and**
+-   **97.4% of the NPC-like tumour cluster was classified as malignant and**
 
-- **71.1% of the MES-like tumour cluster was classified as malignant** :
+-   **71.1% of the MES-like tumour cluster was classified as malignant** :
 
 The GBmap annotation is confirmed, these clusters are tumour cells.
 
-- **About 24% of the MES-like cluster is called normal** : these can be reactive astrocytes (they look like MES-like cells but have no CNV) or tumour cells with a weaker signal close to the threshold. For the next steps we use `cnv_status` rather than the cluster label to select tumour cells.
+-   **About 24% of the MES-like cluster is called normal** : these can be reactive astrocytes (they look like MES-like cells but have no CNV) or tumour cells with a weaker signal close to the threshold. For the next steps we use `cnv_status` rather than the cluster label to select tumour cells.
 
-- **66.9% of the `Unclear` cluster was classified as malignant :** this cluster is mostly made of tumour cells of lower quality (low UMI counts), not debris. Keeping it was the right choice.
+-   **66.9% of the `Unclear` cluster was classified as malignant :** this cluster is mostly made of tumour cells of lower quality (low UMI counts), not debris. Keeping it was the right choice.
 
-- **15.7% of OPCs crossed the threshold** : mostly normal OPC, not OPC-like tumour cells.
+-   **15.7% of OPCs crossed the threshold** : mostly normal OPC, not OPC-like tumour cells.
 
-- **Neurons and astrocytes (0 to 2%)** : normal, the sanity check works.
+-   **Neurons and astrocytes (0 to 2%)** : normal, the sanity check works.
 
-- **Reference cells (1 to 6%)** : this is the expected false positive rate with a threshold at the 99th percentile of the reference. T/NK cells are a bit higher (6%) but there are only 49 cells.
+-   **Reference cells (1 to 6%)** : this is the expected false positive rate with a threshold at the 99th percentile of the reference. T/NK cells are a bit higher (6%) but there are only 49 cells.
 
 ## **Investigation of the chromosome 12 signal**
 
@@ -382,11 +386,11 @@ knitr::kable(chr12_expression_summary,caption = "Expression of candidate chromos
 
 ## Limitations
 
-- The classification depends on the threshold (99th percentile of the reference), which is a choice.
+-   The classification depends on the threshold (99th percentile of the reference), which is a choice.
 
-- inferCNV infers chromosomal alterations from RNA expression and does not directly measure DNA. inferCNV also detects large alterations (whole chromosome or arm), not mutations or small events.
+-   inferCNV infers chromosomal alterations from RNA expression and does not directly measure DNA. inferCNV also detects large alterations (whole chromosome or arm), not mutations or small events.
 
-- The reference only contains cell types present in our sample, neurons are not in it which creates artefacts in the neuron cells.
+-   The reference only contains cell types present in our sample, neurons are not in it which creates artefacts in the neuron cells.
 
 ## Saving the CNV-annotated object
 
