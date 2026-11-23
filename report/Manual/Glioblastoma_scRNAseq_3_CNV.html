@@ -244,28 +244,28 @@ AAACCAATCTTTGGTGAGTAGGCT-1 Oligodendrocytes</code></pre>
 <span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr_exclude =</span> <span class="fu">c</span>(<span class="st">"chrM"</span>, <span class="st">"chrY"</span>)</span>
 <span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:25] Parsing gene order file: ../data/reference/hg38_gencode_v27.txt</code></pre>
+<pre><code>INFO [2026-11-17 09:36:20] Parsing gene order file: ../data/reference/hg38_gencode_v27.txt</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:25] ::order_reduce:Start.</code></pre>
+<pre><code>INFO [2026-11-17 09:36:20] ::order_reduce:Start.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:25] .order_reduce(): expr and order match.</code></pre>
+<pre><code>INFO [2026-11-17 09:36:20] .order_reduce(): expr and order match.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:26] ::process_data:order_reduce:Reduction from positional data, new dimensions (r,c) = 18985,3912 Total=20326458 Min=0 Max=7570.</code></pre>
+<pre><code>INFO [2026-11-17 09:36:21] ::process_data:order_reduce:Reduction from positional data, new dimensions (r,c) = 18985,3912 Total=20326458 Min=0 Max=7570.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:26] num genes removed taking into account provided gene ordering list: 946 = 4.98288122201738% removed.</code></pre>
+<pre><code>INFO [2026-11-17 09:36:21] num genes removed taking into account provided gene ordering list: 946 = 4.98288122201738% removed.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:26] -filtering out cells &lt; 100 or &gt; Inf, removing 0 % of cells</code></pre>
+<pre><code>INFO [2026-11-17 09:36:21] -filtering out cells &lt; 100 or &gt; Inf, removing 0 % of cells</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>WARN [2026-11-16 16:39:26] Please use "options(scipen = 100)" before running infercnv if you are using the analysis_mode="subclusters" option or you may encounter an error while the hclust is being generated.</code></pre>
+<pre><code>WARN [2026-11-17 09:36:21] Please use "options(scipen = 100)" before running infercnv if you are using the analysis_mode="subclusters" option or you may encounter an error while the hclust is being generated.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] validating infercnv_obj</code></pre>
+<pre><code>INFO [2026-11-17 09:36:22] validating infercnv_obj</code></pre>
 </div>
 </div>
 </section>
@@ -289,194 +289,194 @@ AAACCAATCTTTGGTGAGTAGGCT-1 Oligodendrocytes</code></pre>
 <span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">save_rds =</span> <span class="cn">FALSE</span>,</span>
 <span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">num_threads =</span> <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] ::process_data:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:36:22] ::process_data:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] Checking for saved results.</code></pre>
+<pre><code>INFO [2026-11-17 09:36:22] Checking for saved results.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] 
+<pre><code>INFO [2026-11-17 09:36:22] 
 
     STEP 1: incoming data</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] 
+<pre><code>INFO [2026-11-17 09:36:22] 
 
     STEP 02: Removing lowly expressed genes</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] ::above_min_mean_expr_cutoff:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:36:22] ::above_min_mean_expr_cutoff:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] Removing 7736 genes from matrix as below mean expr threshold: 0.1</code></pre>
+<pre><code>INFO [2026-11-17 09:36:22] Removing 7736 genes from matrix as below mean expr threshold: 0.1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] validating infercnv_obj</code></pre>
+<pre><code>INFO [2026-11-17 09:36:22] validating infercnv_obj</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:27] There are 10303 genes and 3912 cells remaining in the expr matrix.</code></pre>
+<pre><code>INFO [2026-11-17 09:36:22] There are 10303 genes and 3912 cells remaining in the expr matrix.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:30] no genes removed due to min cells/gene filter</code></pre>
+<pre><code>INFO [2026-11-17 09:36:25] no genes removed due to min cells/gene filter</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:30] 
+<pre><code>INFO [2026-11-17 09:36:25] 
 
     STEP 03: normalization by sequencing depth</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:30] normalizing counts matrix by depth</code></pre>
+<pre><code>INFO [2026-11-17 09:36:25] normalizing counts matrix by depth</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:32] Computed total sum normalization factor as median libsize: 2536.500000</code></pre>
+<pre><code>INFO [2026-11-17 09:36:27] Computed total sum normalization factor as median libsize: 2536.500000</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:32] 
+<pre><code>INFO [2026-11-17 09:36:27] 
 
     STEP 04: log transformation of data</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:32] transforming log2xplus1()</code></pre>
+<pre><code>INFO [2026-11-17 09:36:27] transforming log2xplus1()</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:35] 
+<pre><code>INFO [2026-11-17 09:36:30] 
 
     STEP 08: removing average of reference data (before smoothing)</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:35] ::subtract_ref_expr_from_obs:Start inv_log=FALSE, use_bounds=TRUE</code></pre>
+<pre><code>INFO [2026-11-17 09:36:30] ::subtract_ref_expr_from_obs:Start inv_log=FALSE, use_bounds=TRUE</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:35] subtracting mean(normal) per gene per cell across all data</code></pre>
+<pre><code>INFO [2026-11-17 09:36:30] subtracting mean(normal) per gene per cell across all data</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:39] -subtracting expr per gene, use_bounds=TRUE</code></pre>
+<pre><code>INFO [2026-11-17 09:36:33] -subtracting expr per gene, use_bounds=TRUE</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:43] 
+<pre><code>INFO [2026-11-17 09:36:37] 
 
     STEP 09: apply max centered expression threshold: 3</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:43] ::process_data:setting max centered expr, threshold set to: +/-:  3</code></pre>
+<pre><code>INFO [2026-11-17 09:36:37] ::process_data:setting max centered expr, threshold set to: +/-:  3</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:44] 
+<pre><code>INFO [2026-11-17 09:36:39] 
 
     STEP 10: Smoothing data per cell by chromosome</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:44] smooth_by_chromosome: chr: chr1</code></pre>
+<pre><code>INFO [2026-11-17 09:36:39] smooth_by_chromosome: chr: chr1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:48] smooth_by_chromosome: chr: chr2</code></pre>
+<pre><code>INFO [2026-11-17 09:36:42] smooth_by_chromosome: chr: chr2</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:52] smooth_by_chromosome: chr: chr3</code></pre>
+<pre><code>INFO [2026-11-17 09:36:46] smooth_by_chromosome: chr: chr3</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:55] smooth_by_chromosome: chr: chr4</code></pre>
+<pre><code>INFO [2026-11-17 09:36:49] smooth_by_chromosome: chr: chr4</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:39:58] smooth_by_chromosome: chr: chr5</code></pre>
+<pre><code>INFO [2026-11-17 09:36:52] smooth_by_chromosome: chr: chr5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:02] smooth_by_chromosome: chr: chr6</code></pre>
+<pre><code>INFO [2026-11-17 09:36:55] smooth_by_chromosome: chr: chr6</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:05] smooth_by_chromosome: chr: chr7</code></pre>
+<pre><code>INFO [2026-11-17 09:36:59] smooth_by_chromosome: chr: chr7</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:09] smooth_by_chromosome: chr: chr8</code></pre>
+<pre><code>INFO [2026-11-17 09:37:02] smooth_by_chromosome: chr: chr8</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:12] smooth_by_chromosome: chr: chr9</code></pre>
+<pre><code>INFO [2026-11-17 09:37:06] smooth_by_chromosome: chr: chr9</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:15] smooth_by_chromosome: chr: chr10</code></pre>
+<pre><code>INFO [2026-11-17 09:37:09] smooth_by_chromosome: chr: chr10</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:18] smooth_by_chromosome: chr: chr11</code></pre>
+<pre><code>INFO [2026-11-17 09:37:12] smooth_by_chromosome: chr: chr11</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:22] smooth_by_chromosome: chr: chr12</code></pre>
+<pre><code>INFO [2026-11-17 09:37:16] smooth_by_chromosome: chr: chr12</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:25] smooth_by_chromosome: chr: chr13</code></pre>
+<pre><code>INFO [2026-11-17 09:37:20] smooth_by_chromosome: chr: chr13</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:29] smooth_by_chromosome: chr: chr14</code></pre>
+<pre><code>INFO [2026-11-17 09:37:23] smooth_by_chromosome: chr: chr14</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:32] smooth_by_chromosome: chr: chr15</code></pre>
+<pre><code>INFO [2026-11-17 09:37:26] smooth_by_chromosome: chr: chr15</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:35] smooth_by_chromosome: chr: chr16</code></pre>
+<pre><code>INFO [2026-11-17 09:37:29] smooth_by_chromosome: chr: chr16</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:39] smooth_by_chromosome: chr: chr17</code></pre>
+<pre><code>INFO [2026-11-17 09:37:32] smooth_by_chromosome: chr: chr17</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:42] smooth_by_chromosome: chr: chr18</code></pre>
+<pre><code>INFO [2026-11-17 09:37:36] smooth_by_chromosome: chr: chr18</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:45] smooth_by_chromosome: chr: chr19</code></pre>
+<pre><code>INFO [2026-11-17 09:37:38] smooth_by_chromosome: chr: chr19</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:49] smooth_by_chromosome: chr: chr20</code></pre>
+<pre><code>INFO [2026-11-17 09:37:42] smooth_by_chromosome: chr: chr20</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:52] smooth_by_chromosome: chr: chr21</code></pre>
+<pre><code>INFO [2026-11-17 09:37:45] smooth_by_chromosome: chr: chr21</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:54] smooth_by_chromosome: chr: chr22</code></pre>
+<pre><code>INFO [2026-11-17 09:37:48] smooth_by_chromosome: chr: chr22</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:40:57] smooth_by_chromosome: chr: chrX</code></pre>
+<pre><code>INFO [2026-11-17 09:37:51] smooth_by_chromosome: chr: chrX</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:01] 
+<pre><code>INFO [2026-11-17 09:37:54] 
 
     STEP 11: re-centering data across chromosome after smoothing</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:01] ::center_smooth across chromosomes per cell</code></pre>
+<pre><code>INFO [2026-11-17 09:37:54] ::center_smooth across chromosomes per cell</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:08] 
+<pre><code>INFO [2026-11-17 09:38:00] 
 
     STEP 12: removing average of reference data (after smoothing)</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:08] ::subtract_ref_expr_from_obs:Start inv_log=FALSE, use_bounds=TRUE</code></pre>
+<pre><code>INFO [2026-11-17 09:38:00] ::subtract_ref_expr_from_obs:Start inv_log=FALSE, use_bounds=TRUE</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:08] subtracting mean(normal) per gene per cell across all data</code></pre>
+<pre><code>INFO [2026-11-17 09:38:00] subtracting mean(normal) per gene per cell across all data</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:12] -subtracting expr per gene, use_bounds=TRUE</code></pre>
+<pre><code>INFO [2026-11-17 09:38:04] -subtracting expr per gene, use_bounds=TRUE</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:15] 
+<pre><code>INFO [2026-11-17 09:38:08] 
 
     STEP 14: invert log2(FC) to FC</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:15] invert_log2(), computing 2^x</code></pre>
+<pre><code>INFO [2026-11-17 09:38:08] invert_log2(), computing 2^x</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:20] 
+<pre><code>INFO [2026-11-17 09:38:12] 
 
     STEP 15: computing tumor subclusters via leiden</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:20] define_signif_tumor_subclusters(p_val=0.1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:12] define_signif_tumor_subclusters(p_val=0.1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:20] define_signif_tumor_subclusters(), tumor: Astrocytes</code></pre>
+<pre><code>INFO [2026-11-17 09:38:13] define_signif_tumor_subclusters(), tumor: Astrocytes</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:20] Setting auto leiden resolution for Astrocytes to 0.180564</code></pre>
+<pre><code>INFO [2026-11-17 09:38:13] Setting auto leiden resolution for Astrocytes to 0.180564</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -531,10 +531,10 @@ Negative:  PHACTR3, FAM217B, CTSZ, NELFCD, NPEPL1, TAF4, LSM14B, STX16, VAPB, PS
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:21] define_signif_tumor_subclusters(), tumor: Cycling cells</code></pre>
+<pre><code>INFO [2026-11-17 09:38:14] define_signif_tumor_subclusters(), tumor: Cycling cells</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:21] Setting auto leiden resolution for Cycling cells to 0.130903</code></pre>
+<pre><code>INFO [2026-11-17 09:38:14] Setting auto leiden resolution for Cycling cells to 0.130903</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -589,10 +589,10 @@ Negative:  SYAP1, CTPS2, AP1S2, PIR, CNKSR2, TM6SF1, HDGFL3, MOSPD2, BTBD1, SH3G
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:22] define_signif_tumor_subclusters(), tumor: Excitatory neurons</code></pre>
+<pre><code>INFO [2026-11-17 09:38:15] define_signif_tumor_subclusters(), tumor: Excitatory neurons</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:22] Setting auto leiden resolution for Excitatory neurons to 0.0301167</code></pre>
+<pre><code>INFO [2026-11-17 09:38:15] Setting auto leiden resolution for Excitatory neurons to 0.0301167</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -647,10 +647,10 @@ Negative:  PDIA3, SERF2, CKMT1A, MFAP1, CATSPER2, WDR76, FRMD5, CKMT1B, CASC4, P
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:25] define_signif_tumor_subclusters(), tumor: Inhibitory neurons</code></pre>
+<pre><code>INFO [2026-11-17 09:38:18] define_signif_tumor_subclusters(), tumor: Inhibitory neurons</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:25] Setting auto leiden resolution for Inhibitory neurons to 0.112316</code></pre>
+<pre><code>INFO [2026-11-17 09:38:18] Setting auto leiden resolution for Inhibitory neurons to 0.112316</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -705,10 +705,10 @@ Negative:  NUP54, SCARB2, NAAA, FAM47E, USO1, CCNI, CCNG2, G3BP2, CDKL2, THAP6
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:26] define_signif_tumor_subclusters(), tumor: OPC</code></pre>
+<pre><code>INFO [2026-11-17 09:38:19] define_signif_tumor_subclusters(), tumor: OPC</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:26] Setting auto leiden resolution for OPC to 0.173804</code></pre>
+<pre><code>INFO [2026-11-17 09:38:19] Setting auto leiden resolution for OPC to 0.173804</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -763,10 +763,10 @@ Negative:  DIS3L, MEGF11, MAP2K1, RAB11A, SNAPC5, INTS14, DENND4A, HACD3, DPP8, 
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:27] define_signif_tumor_subclusters(), tumor: Tumour MES-like</code></pre>
+<pre><code>INFO [2026-11-17 09:38:20] define_signif_tumor_subclusters(), tumor: Tumour MES-like</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:27] Setting auto leiden resolution for Tumour MES-like to 0.0347564</code></pre>
+<pre><code>INFO [2026-11-17 09:38:20] Setting auto leiden resolution for Tumour MES-like to 0.0347564</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -821,10 +821,10 @@ Negative:  EVC, MSX1, STX18, CRMP1, C4orf50, TMEM128, JAKMIP1, LRPAP1, WFS1, PPP
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:30] define_signif_tumor_subclusters(), tumor: Tumour MES-like (hypoxic)</code></pre>
+<pre><code>INFO [2026-11-17 09:38:22] define_signif_tumor_subclusters(), tumor: Tumour MES-like (hypoxic)</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:30] Setting auto leiden resolution for Tumour MES-like (hypoxic) to 0.0822339</code></pre>
+<pre><code>INFO [2026-11-17 09:38:22] Setting auto leiden resolution for Tumour MES-like (hypoxic) to 0.0822339</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -879,10 +879,10 @@ Negative:  WDR25, WARS, BEGAIN, SLC25A29, YY1, PPP2R5C, EVL, EML1, CCDC85C, CYP4
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:31] define_signif_tumor_subclusters(), tumor: Tumour NPC-like</code></pre>
+<pre><code>INFO [2026-11-17 09:38:24] define_signif_tumor_subclusters(), tumor: Tumour NPC-like</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:31] Setting auto leiden resolution for Tumour NPC-like to 0.0383512</code></pre>
+<pre><code>INFO [2026-11-17 09:38:24] Setting auto leiden resolution for Tumour NPC-like to 0.0383512</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -937,10 +937,10 @@ Negative:  UBE2G1, SPNS2, ANKFY1, CYB5D2, MYBBP1A, ZZEF1, PELP1, CAMKK1, ARRB2, 
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:33] define_signif_tumor_subclusters(), tumor: Unclear</code></pre>
+<pre><code>INFO [2026-11-17 09:38:26] define_signif_tumor_subclusters(), tumor: Unclear</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:33] Setting auto leiden resolution for Unclear to 0.102604</code></pre>
+<pre><code>INFO [2026-11-17 09:38:26] Setting auto leiden resolution for Unclear to 0.102604</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -995,10 +995,10 @@ Negative:  TCF12, FAM81A, ZNF280D, MNS1, GTF2A2, DNAAF4, CCPG1, BNIP2, RAB27A, A
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:34] define_signif_tumor_subclusters(), tumor: Oligodendrocytes</code></pre>
+<pre><code>INFO [2026-11-17 09:38:27] define_signif_tumor_subclusters(), tumor: Oligodendrocytes</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:34] Setting auto leiden resolution for Oligodendrocytes to 0.045182</code></pre>
+<pre><code>INFO [2026-11-17 09:38:27] Setting auto leiden resolution for Oligodendrocytes to 0.045182</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -1053,10 +1053,10 @@ Negative:  NYAP1, AGFG2, SAP25, LRCH4, TSC22D4, PPP1R35, MEPCE, PCOLCE, PILRA, P
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:36] define_signif_tumor_subclusters(), tumor: Myeloid</code></pre>
+<pre><code>INFO [2026-11-17 09:38:29] define_signif_tumor_subclusters(), tumor: Myeloid</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:36] Setting auto leiden resolution for Myeloid to 0.0372772</code></pre>
+<pre><code>INFO [2026-11-17 09:38:29] Setting auto leiden resolution for Myeloid to 0.0372772</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -1111,10 +1111,10 @@ Negative:  JUNB, HOOK2, TRIR, PRDX2, TNPO2, MAST1, DHPS, WDR83OS, DNASE2, WDR83
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:39] define_signif_tumor_subclusters(), tumor: T/NK cells</code></pre>
+<pre><code>INFO [2026-11-17 09:38:31] define_signif_tumor_subclusters(), tumor: T/NK cells</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:39] Setting auto leiden resolution for T/NK cells to 0.3038</code></pre>
+<pre><code>INFO [2026-11-17 09:38:31] Setting auto leiden resolution for T/NK cells to 0.3038</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -1169,10 +1169,10 @@ Negative:  DUSP26, UNC5D, MAK16, TTI2, NRG1, WRN, GSR, PURG, GTF2E2, PPP2CB
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:40] define_signif_tumor_subclusters(), tumor: Vascular</code></pre>
+<pre><code>INFO [2026-11-17 09:38:32] define_signif_tumor_subclusters(), tumor: Vascular</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:40] Setting auto leiden resolution for Vascular to 0.100576</code></pre>
+<pre><code>INFO [2026-11-17 09:38:32] Setting auto leiden resolution for Vascular to 0.100576</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Data is of class matrix. Coercing to dgCMatrix.</code></pre>
@@ -1227,692 +1227,692 @@ Negative:  ZC3H3, RHPN1, GSDMD, TOP1MT, ZNF696, KCNJ6, ETS2, DYRK1A, HLCS, PIGP
 <pre><code>Computing SNN</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:41] ::plot_cnv:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:38:33] ::plot_cnv:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:41] ::plot_cnv:Current data dimensions (r,c)=10303,3912 Total=40365013.5049854 Min=0.871937918359486 Max=1.45564959511394.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:33] ::plot_cnv:Current data dimensions (r,c)=10303,3912 Total=40365013.5049854 Min=0.871937918359486 Max=1.45564959511394.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:42] ::plot_cnv:Depending on the size of the matrix this may take a moment.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:33] ::plot_cnv:Depending on the size of the matrix this may take a moment.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:42] plot_cnv(): auto thresholding at: (0.911223 , 1.091738)</code></pre>
+<pre><code>INFO [2026-11-17 09:38:34] plot_cnv(): auto thresholding at: (0.911223 , 1.091738)</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] plot_cnv_observation:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] plot_cnv_observation:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Observation data size: Cells= 2695 Genes= 10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Observation data size: Cells= 2695 Genes= 10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] clustering observations via method: ward.D</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] clustering observations via method: ward.D</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Number of cells in group(1) is 55</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(1) is 55</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] group size being clustered:  55,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] group size being clustered:  55,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Number of cells in group(2) is 32</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(2) is 32</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] group size being clustered:  32,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] group size being clustered:  32,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Number of cells in group(3) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(3) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Skipping group: 3, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Skipping group: 3, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Number of cells in group(4) is 68</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(4) is 68</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] group size being clustered:  68,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] group size being clustered:  68,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Number of cells in group(5) is 38</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(5) is 38</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] group size being clustered:  38,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] group size being clustered:  38,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Number of cells in group(6) is 21</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(6) is 21</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] group size being clustered:  21,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] group size being clustered:  21,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Number of cells in group(7) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(7) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Skipping group: 7, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Skipping group: 7, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] Number of cells in group(8) is 185</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(8) is 185</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:44] group size being clustered:  185,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] group size being clustered:  185,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(9) is 128</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] Number of cells in group(9) is 128</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  128,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:36] group size being clustered:  128,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(10) is 126</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(10) is 126</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  126,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  126,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(11) is 87</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(11) is 87</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  87,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  87,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(12) is 47</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(12) is 47</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  47,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  47,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(13) is 32</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(13) is 32</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  32,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  32,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(14) is 17</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(14) is 17</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  17,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  17,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(15) is 14</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(15) is 14</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  14,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  14,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(16) is 14</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(16) is 14</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  14,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  14,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(17) is 13</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(17) is 13</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  13,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  13,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(18) is 10</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(18) is 10</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  10,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  10,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(19) is 10</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(19) is 10</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  10,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  10,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(20) is 6</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(20) is 6</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  6,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  6,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(21) is 5</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(21) is 5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  5,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  5,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(22) is 5</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(22) is 5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  5,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  5,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(23) is 4</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(23) is 4</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  4,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  4,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(24) is 4</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(24) is 4</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  4,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  4,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(25) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(25) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Skipping group: 25, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Skipping group: 25, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(26) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(26) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Skipping group: 26, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Skipping group: 26, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(27) is 74</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(27) is 74</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  74,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  74,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(28) is 64</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(28) is 64</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  64,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  64,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(29) is 7</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(29) is 7</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  7,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  7,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(30) is 5</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(30) is 5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  5,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  5,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(31) is 2</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(31) is 2</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  2,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  2,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(32) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(32) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Skipping group: 32, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Skipping group: 32, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] Number of cells in group(33) is 73</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(33) is 73</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:45] group size being clustered:  73,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  73,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(34) is 14</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(34) is 14</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  14,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  14,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(35) is 4</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(35) is 4</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  4,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  4,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(36) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(36) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Skipping group: 36, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Skipping group: 36, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(37) is 115</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(37) is 115</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  115,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  115,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(38) is 96</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(38) is 96</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  96,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  96,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(39) is 90</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(39) is 90</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  90,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  90,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(40) is 75</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(40) is 75</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  75,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  75,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(41) is 73</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(41) is 73</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  73,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  73,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(42) is 42</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(42) is 42</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  42,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  42,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(43) is 30</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(43) is 30</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  30,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  30,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(44) is 26</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(44) is 26</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  26,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  26,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(45) is 11</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(45) is 11</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  11,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  11,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(46) is 10</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(46) is 10</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  10,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  10,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(47) is 8</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(47) is 8</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  8,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  8,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(48) is 7</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(48) is 7</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  7,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  7,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(49) is 5</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(49) is 5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  5,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  5,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(50) is 5</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(50) is 5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  5,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  5,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(51) is 2</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(51) is 2</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  2,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  2,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(52) is 2</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(52) is 2</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  2,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] group size being clustered:  2,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(53) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(53) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Skipping group: 53, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Skipping group: 53, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(54) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(54) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Skipping group: 54, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Skipping group: 54, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(55) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Number of cells in group(55) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Skipping group: 55, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:37] Skipping group: 55, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(56) is 80</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(56) is 80</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  80,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  80,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(57) is 64</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(57) is 64</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  64,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  64,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(58) is 57</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(58) is 57</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  57,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  57,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(59) is 6</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(59) is 6</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  6,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  6,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(60) is 5</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(60) is 5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  5,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  5,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(61) is 3</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(61) is 3</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  3,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  3,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(62) is 2</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(62) is 2</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  2,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  2,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(63) is 2</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(63) is 2</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  2,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  2,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(64) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(64) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Skipping group: 64, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Skipping group: 64, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(65) is 104</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(65) is 104</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  104,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  104,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(66) is 98</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(66) is 98</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  98,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  98,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(67) is 80</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(67) is 80</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  80,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  80,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(68) is 60</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(68) is 60</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  60,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  60,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(69) is 57</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(69) is 57</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  57,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  57,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(70) is 56</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(70) is 56</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  56,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  56,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(71) is 27</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(71) is 27</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  27,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  27,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(72) is 16</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(72) is 16</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  16,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  16,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(73) is 15</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(73) is 15</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  15,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  15,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(74) is 14</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(74) is 14</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  14,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  14,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(75) is 3</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(75) is 3</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  3,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  3,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(76) is 2</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(76) is 2</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  2,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  2,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(77) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(77) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Skipping group: 77, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Skipping group: 77, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(78) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(78) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Skipping group: 78, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Skipping group: 78, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(79) is 1</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(79) is 1</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Skipping group: 79, since less than 2 entries</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Skipping group: 79, since less than 2 entries</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] Number of cells in group(80) is 64</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(80) is 64</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:46] group size being clustered:  64,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  64,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] Number of cells in group(81) is 44</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(81) is 44</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] group size being clustered:  44,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  44,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] Number of cells in group(82) is 40</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(82) is 40</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] group size being clustered:  40,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  40,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] Number of cells in group(83) is 17</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(83) is 17</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] group size being clustered:  17,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  17,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] Number of cells in group(84) is 5</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] Number of cells in group(84) is 5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] group size being clustered:  5,10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] group size being clustered:  5,10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] plot_cnv_observation:Writing observation groupings/color.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] plot_cnv_observation:Writing observation groupings/color.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] plot_cnv_observation:Done writing observation groupings/color.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:38] plot_cnv_observation:Done writing observation groupings/color.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] plot_cnv_observation:Writing observation heatmap thresholds.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:39] plot_cnv_observation:Writing observation heatmap thresholds.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:47] plot_cnv_observation:Done writing observation heatmap thresholds.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:39] plot_cnv_observation:Done writing observation heatmap thresholds.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:51] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
+<pre><code>INFO [2026-11-17 09:38:43] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:51] Quantiles of plotted data range: 0.911223127048375,0.986262885805436,1,1.01250668871487,1.09173814363724</code></pre>
+<pre><code>INFO [2026-11-17 09:38:43] Quantiles of plotted data range: 0.911223127048375,0.986262885805436,1,1.01250668871487,1.09173814363724</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:54] plot_cnv_references:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:38:45] plot_cnv_references:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:54] Reference data size: Cells= 1217 Genes= 10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:45] Reference data size: Cells= 1217 Genes= 10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:55] plot_cnv_references:Number reference groups= 47</code></pre>
+<pre><code>INFO [2026-11-17 09:38:46] plot_cnv_references:Number reference groups= 47</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:55] plot_cnv_references:Plotting heatmap.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:46] plot_cnv_references:Plotting heatmap.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:57] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
+<pre><code>INFO [2026-11-17 09:38:48] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:57] Quantiles of plotted data range: 0.911223127048375,0.990800603132901,1,1.0068778543868,1.09173814363724</code></pre>
+<pre><code>INFO [2026-11-17 09:38:48] Quantiles of plotted data range: 0.911223127048375,0.990800603132901,1,1.0068778543868,1.09173814363724</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:58] ::plot_cnv:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:38:50] ::plot_cnv:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:58] ::plot_cnv:Current data dimensions (r,c)=10303,3912 Total=40365013.5049854 Min=0.871937918359486 Max=1.45564959511394.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:50] ::plot_cnv:Current data dimensions (r,c)=10303,3912 Total=40365013.5049854 Min=0.871937918359486 Max=1.45564959511394.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:59] ::plot_cnv:Depending on the size of the matrix this may take a moment.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:50] ::plot_cnv:Depending on the size of the matrix this may take a moment.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:41:59] plot_cnv(): auto thresholding at: (0.911223 , 1.091738)</code></pre>
+<pre><code>INFO [2026-11-17 09:38:51] plot_cnv(): auto thresholding at: (0.911223 , 1.091738)</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:00] plot_cnv_observation:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:38:52] plot_cnv_observation:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:00] Observation data size: Cells= 2695 Genes= 10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:52] Observation data size: Cells= 2695 Genes= 10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:01] plot_cnv_observation:Writing observation groupings/color.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:52] plot_cnv_observation:Writing observation groupings/color.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:01] plot_cnv_observation:Done writing observation groupings/color.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:52] plot_cnv_observation:Done writing observation groupings/color.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:01] plot_cnv_observation:Writing observation heatmap thresholds.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:52] plot_cnv_observation:Writing observation heatmap thresholds.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:01] plot_cnv_observation:Done writing observation heatmap thresholds.</code></pre>
+<pre><code>INFO [2026-11-17 09:38:52] plot_cnv_observation:Done writing observation heatmap thresholds.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:05] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
+<pre><code>INFO [2026-11-17 09:38:56] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:05] Quantiles of plotted data range: 0.911223127048375,0.986262885805436,1,1.01250668871487,1.09173814363724</code></pre>
+<pre><code>INFO [2026-11-17 09:38:56] Quantiles of plotted data range: 0.911223127048375,0.986262885805436,1,1.01250668871487,1.09173814363724</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:07] plot_cnv_references:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:38:58] plot_cnv_references:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:07] Reference data size: Cells= 1217 Genes= 10303</code></pre>
+<pre><code>INFO [2026-11-17 09:38:58] Reference data size: Cells= 1217 Genes= 10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:15] plot_cnv_references:Number reference groups= 4</code></pre>
+<pre><code>INFO [2026-11-17 09:39:07] plot_cnv_references:Number reference groups= 4</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:15] plot_cnv_references:Plotting heatmap.</code></pre>
+<pre><code>INFO [2026-11-17 09:39:07] plot_cnv_references:Plotting heatmap.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:18] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
+<pre><code>INFO [2026-11-17 09:39:09] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:18] Quantiles of plotted data range: 0.911223127048375,0.990800603132901,1,1.0068778543868,1.09173814363724</code></pre>
+<pre><code>INFO [2026-11-17 09:39:09] Quantiles of plotted data range: 0.911223127048375,0.990800603132901,1,1.0068778543868,1.09173814363724</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:19] 
+<pre><code>INFO [2026-11-17 09:39:10] 
 
     STEP 22: Denoising</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:19] ::process_data:Remove noise, noise threshold defined via ref mean sd_amplifier:  1.5</code></pre>
+<pre><code>INFO [2026-11-17 09:39:10] ::process_data:Remove noise, noise threshold defined via ref mean sd_amplifier:  1.5</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:19] denoising using mean(normal) +- sd_amplifier * sd(normal) per gene per cell across all data</code></pre>
+<pre><code>INFO [2026-11-17 09:39:10] denoising using mean(normal) +- sd_amplifier * sd(normal) per gene per cell across all data</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:19] :: **** clear_noise_via_ref_quantiles **** : removing noise between bounds:  0.970553434696889 - 1.03058784517001</code></pre>
+<pre><code>INFO [2026-11-17 09:39:10] :: **** clear_noise_via_ref_quantiles **** : removing noise between bounds:  0.970553434696889 - 1.03058784517001</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:28] 
+<pre><code>INFO [2026-11-17 09:39:20] 
 
 ## Making the final infercnv heatmap ##</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:29] ::plot_cnv:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:39:20] ::plot_cnv:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:29] ::plot_cnv:Current data dimensions (r,c)=10303,3912 Total=40414796.7893966 Min=0.871937918359486 Max=1.45564959511394.</code></pre>
+<pre><code>INFO [2026-11-17 09:39:20] ::plot_cnv:Current data dimensions (r,c)=10303,3912 Total=40414796.7893966 Min=0.871937918359486 Max=1.45564959511394.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:29] ::plot_cnv:Depending on the size of the matrix this may take a moment.</code></pre>
+<pre><code>INFO [2026-11-17 09:39:20] ::plot_cnv:Depending on the size of the matrix this may take a moment.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:30] plot_cnv(): auto thresholding at: (0.908262 , 1.091738)</code></pre>
+<pre><code>INFO [2026-11-17 09:39:21] plot_cnv(): auto thresholding at: (0.908262 , 1.091738)</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:31] plot_cnv_observation:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:39:22] plot_cnv_observation:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:31] Observation data size: Cells= 2695 Genes= 10303</code></pre>
+<pre><code>INFO [2026-11-17 09:39:22] Observation data size: Cells= 2695 Genes= 10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:31] plot_cnv_observation:Writing observation groupings/color.</code></pre>
+<pre><code>INFO [2026-11-17 09:39:22] plot_cnv_observation:Writing observation groupings/color.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:31] plot_cnv_observation:Done writing observation groupings/color.</code></pre>
+<pre><code>INFO [2026-11-17 09:39:22] plot_cnv_observation:Done writing observation groupings/color.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:31] plot_cnv_observation:Writing observation heatmap thresholds.</code></pre>
+<pre><code>INFO [2026-11-17 09:39:22] plot_cnv_observation:Writing observation heatmap thresholds.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:31] plot_cnv_observation:Done writing observation heatmap thresholds.</code></pre>
+<pre><code>INFO [2026-11-17 09:39:22] plot_cnv_observation:Done writing observation heatmap thresholds.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:36] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
+<pre><code>INFO [2026-11-17 09:39:27] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:36] Quantiles of plotted data range: 0.908261856362756,1.00057063993345,1.00057063993345,1.00057063993345,1.09173814363724</code></pre>
+<pre><code>INFO [2026-11-17 09:39:27] Quantiles of plotted data range: 0.908261856362756,1.00057063993345,1.00057063993345,1.00057063993345,1.09173814363724</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:38] plot_cnv_references:Start</code></pre>
+<pre><code>INFO [2026-11-17 09:39:30] plot_cnv_references:Start</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:38] Reference data size: Cells= 1217 Genes= 10303</code></pre>
+<pre><code>INFO [2026-11-17 09:39:30] Reference data size: Cells= 1217 Genes= 10303</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:46] plot_cnv_references:Number reference groups= 4</code></pre>
+<pre><code>INFO [2026-11-17 09:39:39] plot_cnv_references:Number reference groups= 4</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:46] plot_cnv_references:Plotting heatmap.</code></pre>
+<pre><code>INFO [2026-11-17 09:39:39] plot_cnv_references:Plotting heatmap.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:48] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
+<pre><code>INFO [2026-11-17 09:39:40] Colors for breaks:  #00008B,#24249B,#4848AB,#6D6DBC,#9191CC,#B6B6DD,#DADAEE,#FFFFFF,#EEDADA,#DDB6B6,#CC9191,#BC6D6D,#AB4848,#9B2424,#8B0000</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO [2026-11-16 16:42:48] Quantiles of plotted data range: 0.908261856362756,1.00057063993345,1.00057063993345,1.00057063993345,1.09173814363724</code></pre>
+<pre><code>INFO [2026-11-17 09:39:40] Quantiles of plotted data range: 0.908261856362756,1.00057063993345,1.00057063993345,1.00057063993345,1.09173814363724</code></pre>
 </div>
 </div>
 <p><code>cluster_by_groups = TRUE</code> preserves the cell-type grouping in the heatmap. The ordering within each group is still informed by the similarity of the inferred CNV profiles.</p>
@@ -2033,45 +2033,45 @@ Negative:  ZC3H3, RHPN1, GSDMD, TOP1MT, ZNF696, KCNJ6, ETS2, DYRK1A, HLCS, PIGP
 <span id="cb410-3"><a href="#cb410-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb410-4"><a href="#cb410-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the 99th percentile of the reference chr7–chr10 distribution</span></span>
 <span id="cb410-5"><a href="#cb410-5" aria-hidden="true" tabindex="-1"></a>cnv_threshold <span class="ot">&lt;-</span> <span class="fu">unname</span>(<span class="fu">quantile</span>(sobjFiltrd<span class="sc">$</span>chr7_minus_chr10[is_reference],</span>
-<span id="cb410-6"><a href="#cb410-6" aria-hidden="true" tabindex="-1"></a>                                 <span class="at">probabilities =</span> <span class="fl">0.99</span>,<span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb410-6"><a href="#cb410-6" aria-hidden="true" tabindex="-1"></a>                                 <span class="at">probs =</span> <span class="fl">0.99</span>,<span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
 <span id="cb410-7"><a href="#cb410-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb410-8"><a href="#cb410-8" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Chr7–chr10 malignancy threshold:"</span>,<span class="fu">round</span>(cnv_threshold, <span class="dv">4</span>),<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb410-8"><a href="#cb410-8" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">length</span>(cnv_threshold) <span class="sc">==</span> <span class="dv">1</span>)</span>
+<span id="cb410-9"><a href="#cb410-9" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">mean</span>(sobjFiltrd<span class="sc">$</span>chr7_minus_chr10[is_reference] <span class="sc">&gt;</span> cnv_threshold, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span>
+<span id="cb410-10"><a href="#cb410-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb410-11"><a href="#cb410-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Chr7–chr10 malignancy threshold:"</span>,<span class="fu">round</span>(cnv_threshold, <span class="dv">4</span>),<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Chr7–chr10 malignancy threshold: -0.0638 -0.0056 -2e-04 0.0033 0.1008 </code></pre>
+<pre><code>Chr7–chr10 malignancy threshold: 0.0297 </code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb412"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb412-1"><a href="#cb412-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Assign the operational CNV status</span></span>
-<span id="cb412-2"><a href="#cb412-2" aria-hidden="true" tabindex="-1"></a>sobjFiltrd<span class="sc">$</span>cnv_status <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(sobjFiltrd<span class="sc">$</span>chr7_minus_chr10 <span class="sc">&gt;</span> cnv_threshold, <span class="st">"Malignant"</span>, <span class="st">"Normal"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in sobjFiltrd$chr7_minus_chr10 &gt; cnv_threshold: longer object length is
-not a multiple of shorter object length</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb414"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb414-1"><a href="#cb414-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Store the status in a consistent order</span></span>
-<span id="cb414-2"><a href="#cb414-2" aria-hidden="true" tabindex="-1"></a>sobjFiltrd<span class="sc">$</span>cnv_status <span class="ot">&lt;-</span> <span class="fu">factor</span>(sobjFiltrd<span class="sc">$</span>cnv_status,<span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Normal"</span>, <span class="st">"Malignant"</span>))</span>
-<span id="cb414-3"><a href="#cb414-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb414-4"><a href="#cb414-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare cell-type annotations with the CNV-based status</span></span>
-<span id="cb414-5"><a href="#cb414-5" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sobjFiltrd<span class="sc">$</span>celltype, sobjFiltrd<span class="sc">$</span>cnv_status)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb412-2"><a href="#cb412-2" aria-hidden="true" tabindex="-1"></a>sobjFiltrd<span class="sc">$</span>cnv_status <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(sobjFiltrd<span class="sc">$</span>chr7_minus_chr10 <span class="sc">&gt;</span> cnv_threshold, <span class="st">"Malignant"</span>, <span class="st">"Normal"</span>)</span>
+<span id="cb412-3"><a href="#cb412-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb412-4"><a href="#cb412-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Store the status in a consistent order</span></span>
+<span id="cb412-5"><a href="#cb412-5" aria-hidden="true" tabindex="-1"></a>sobjFiltrd<span class="sc">$</span>cnv_status <span class="ot">&lt;-</span> <span class="fu">factor</span>(sobjFiltrd<span class="sc">$</span>cnv_status,<span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Normal"</span>, <span class="st">"Malignant"</span>))</span>
+<span id="cb412-6"><a href="#cb412-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb412-7"><a href="#cb412-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare cell-type annotations with the CNV-based status</span></span>
+<span id="cb412-8"><a href="#cb412-8" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sobjFiltrd<span class="sc">$</span>celltype, sobjFiltrd<span class="sc">$</span>cnv_status)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                           
                             Normal Malignant
-  Excitatory neurons           275       434
-  Inhibitory neurons            52       101
-  Astrocytes                    49        39
-  Oligodendrocytes             220       222
-  OPC                           36        56
-  Tumour MES-like              165       435
-  Tumour MES-like (hypoxic)     38       182
-  Tumour NPC-like               91       444
-  Cycling cells                 22       106
-  Myeloid                      281       272
-  T/NK cells                    22        26
-  Vascular                      67       107
-  Unclear                       45       125</code></pre>
+  Excitatory neurons           694        15
+  Inhibitory neurons           150         3
+  Astrocytes                    87         1
+  Oligodendrocytes             442         0
+  OPC                           77        15
+  Tumour MES-like              304       296
+  Tumour MES-like (hypoxic)     32       188
+  Tumour NPC-like               10       525
+  Cycling cells                  8       120
+  Myeloid                      547         6
+  T/NK cells                    46         2
+  Vascular                     169         5
+  Unclear                       55       115</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb416"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb416-1"><a href="#cb416-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the CNV-based classification on the existing UMAP</span></span>
-<span id="cb416-2"><a href="#cb416-2" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(sobjFiltrd,<span class="at">reduction =</span> <span class="st">"umap"</span>,<span class="at">group.by =</span> <span class="st">"cnv_status"</span>) <span class="sc">+</span></span>
-<span id="cb416-3"><a href="#cb416-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"CNV-based classification of malignant and normal cells"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb414"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb414-1"><a href="#cb414-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the CNV-based classification on the existing UMAP</span></span>
+<span id="cb414-2"><a href="#cb414-2" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(sobjFiltrd,<span class="at">reduction =</span> <span class="st">"umap"</span>,<span class="at">group.by =</span> <span class="st">"cnv_status"</span>) <span class="sc">+</span></span>
+<span id="cb414-3"><a href="#cb414-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"CNV-based classification of malignant and normal cells"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -2085,24 +2085,24 @@ not a multiple of shorter object length</code></pre>
 <h2 class="anchored" data-anchor-id="summary-by-cell-type">Summary by cell type</h2>
 <p>The percentage of cells classified as malignant and the median chromosome-specific signals were summarised for every annotated population.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb417"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb417-1"><a href="#cb417-1" aria-hidden="true" tabindex="-1"></a>cnv_summary <span class="ot">&lt;-</span> sobjFiltrd<span class="sc">@</span>meta.data <span class="sc">%&gt;%</span></span>
-<span id="cb417-2"><a href="#cb417-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">analysis_group =</span> <span class="fu">ifelse</span>(celltype <span class="sc">%in%</span> ref_groups,<span class="st">"Reference"</span>,<span class="st">"Tested"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb417-3"><a href="#cb417-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(analysis_group,celltype) <span class="sc">%&gt;%</span> <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(),<span class="at">n_malignant =</span> <span class="fu">sum</span>(</span>
-<span id="cb417-4"><a href="#cb417-4" aria-hidden="true" tabindex="-1"></a>    cnv_status <span class="sc">==</span> <span class="st">"Malignant"</span>),<span class="at">pct_malignant =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">mean</span>(</span>
-<span id="cb417-5"><a href="#cb417-5" aria-hidden="true" tabindex="-1"></a>      cnv_status <span class="sc">==</span> <span class="st">"Malignant"</span>),<span class="dv">1</span>),<span class="at">median_cnv_score =</span> <span class="fu">round</span>(<span class="fu">median</span>(cnv_score),<span class="dv">5</span>),</span>
-<span id="cb417-6"><a href="#cb417-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_chr7 =</span> <span class="fu">round</span>(<span class="fu">median</span>(chr7),<span class="dv">3</span>),<span class="at">median_chr10 =</span> <span class="fu">round</span>(<span class="fu">median</span>(chr10),<span class="dv">3</span>),</span>
-<span id="cb417-7"><a href="#cb417-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">%&gt;%</span> <span class="fu">arrange</span>(analysis_group,<span class="fu">desc</span>(pct_malignant))</span>
-<span id="cb417-8"><a href="#cb417-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb417-9"><a href="#cb417-9" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(cnv_summary,<span class="at">col.names =</span> <span class="fu">c</span>(</span>
-<span id="cb417-10"><a href="#cb417-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Group"</span>,</span>
-<span id="cb417-11"><a href="#cb417-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Cell type"</span>,</span>
-<span id="cb417-12"><a href="#cb417-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"n"</span>,</span>
-<span id="cb417-13"><a href="#cb417-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Malignant cells"</span>,</span>
-<span id="cb417-14"><a href="#cb417-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">"% malignant"</span>,</span>
-<span id="cb417-15"><a href="#cb417-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Median CNV score"</span>,</span>
-<span id="cb417-16"><a href="#cb417-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Median chr7"</span>,</span>
-<span id="cb417-17"><a href="#cb417-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Median chr10"</span>),</span>
-<span id="cb417-18"><a href="#cb417-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">"CNV-based classification by annotated cell population"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb415"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb415-1"><a href="#cb415-1" aria-hidden="true" tabindex="-1"></a>cnv_summary <span class="ot">&lt;-</span> sobjFiltrd<span class="sc">@</span>meta.data <span class="sc">%&gt;%</span></span>
+<span id="cb415-2"><a href="#cb415-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">analysis_group =</span> <span class="fu">ifelse</span>(celltype <span class="sc">%in%</span> ref_groups,<span class="st">"Reference"</span>,<span class="st">"Tested"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb415-3"><a href="#cb415-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(analysis_group,celltype) <span class="sc">%&gt;%</span> <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(),<span class="at">n_malignant =</span> <span class="fu">sum</span>(</span>
+<span id="cb415-4"><a href="#cb415-4" aria-hidden="true" tabindex="-1"></a>    cnv_status <span class="sc">==</span> <span class="st">"Malignant"</span>),<span class="at">pct_malignant =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">mean</span>(</span>
+<span id="cb415-5"><a href="#cb415-5" aria-hidden="true" tabindex="-1"></a>      cnv_status <span class="sc">==</span> <span class="st">"Malignant"</span>),<span class="dv">1</span>),<span class="at">median_cnv_score =</span> <span class="fu">round</span>(<span class="fu">median</span>(cnv_score),<span class="dv">5</span>),</span>
+<span id="cb415-6"><a href="#cb415-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_chr7 =</span> <span class="fu">round</span>(<span class="fu">median</span>(chr7),<span class="dv">3</span>),<span class="at">median_chr10 =</span> <span class="fu">round</span>(<span class="fu">median</span>(chr10),<span class="dv">3</span>),</span>
+<span id="cb415-7"><a href="#cb415-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">%&gt;%</span> <span class="fu">arrange</span>(analysis_group,<span class="fu">desc</span>(pct_malignant))</span>
+<span id="cb415-8"><a href="#cb415-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb415-9"><a href="#cb415-9" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(cnv_summary,<span class="at">col.names =</span> <span class="fu">c</span>(</span>
+<span id="cb415-10"><a href="#cb415-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Group"</span>,</span>
+<span id="cb415-11"><a href="#cb415-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Cell type"</span>,</span>
+<span id="cb415-12"><a href="#cb415-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"n"</span>,</span>
+<span id="cb415-13"><a href="#cb415-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Malignant cells"</span>,</span>
+<span id="cb415-14"><a href="#cb415-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">"% malignant"</span>,</span>
+<span id="cb415-15"><a href="#cb415-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Median CNV score"</span>,</span>
+<span id="cb415-16"><a href="#cb415-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Median chr7"</span>,</span>
+<span id="cb415-17"><a href="#cb415-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Median chr10"</span>),</span>
+<span id="cb415-18"><a href="#cb415-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">"CNV-based classification by annotated cell population"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small">
 <caption>CNV-based classification by annotated cell population</caption>
@@ -2131,50 +2131,50 @@ not a multiple of shorter object length</code></pre>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">Reference</td>
-<td style="text-align: left;">Vascular</td>
-<td style="text-align: right;">174</td>
-<td style="text-align: right;">107</td>
-<td style="text-align: right;">61.5</td>
-<td style="text-align: right;">0.00032</td>
-<td style="text-align: right;">1.001</td>
-<td style="text-align: right;">1.001</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Reference</td>
 <td style="text-align: left;">T/NK cells</td>
 <td style="text-align: right;">48</td>
-<td style="text-align: right;">26</td>
-<td style="text-align: right;">54.2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4.2</td>
 <td style="text-align: right;">0.00058</td>
 <td style="text-align: right;">1.003</td>
 <td style="text-align: right;">1.001</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;">Reference</td>
-<td style="text-align: left;">Oligodendrocytes</td>
-<td style="text-align: right;">442</td>
-<td style="text-align: right;">222</td>
-<td style="text-align: right;">50.2</td>
-<td style="text-align: right;">0.00020</td>
+<td style="text-align: left;">Vascular</td>
+<td style="text-align: right;">174</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2.9</td>
+<td style="text-align: right;">0.00032</td>
 <td style="text-align: right;">1.001</td>
 <td style="text-align: right;">1.001</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;">Reference</td>
 <td style="text-align: left;">Myeloid</td>
 <td style="text-align: right;">553</td>
-<td style="text-align: right;">272</td>
-<td style="text-align: right;">49.2</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">1.1</td>
 <td style="text-align: right;">0.00026</td>
 <td style="text-align: right;">1.001</td>
 <td style="text-align: right;">1.002</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Reference</td>
+<td style="text-align: left;">Oligodendrocytes</td>
+<td style="text-align: right;">442</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">0.00020</td>
+<td style="text-align: right;">1.001</td>
+<td style="text-align: right;">1.001</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Tested</td>
 <td style="text-align: left;">Tumour NPC-like</td>
 <td style="text-align: right;">535</td>
-<td style="text-align: right;">444</td>
-<td style="text-align: right;">83.0</td>
+<td style="text-align: right;">525</td>
+<td style="text-align: right;">98.1</td>
 <td style="text-align: right;">0.00101</td>
 <td style="text-align: right;">1.046</td>
 <td style="text-align: right;">0.961</td>
@@ -2183,8 +2183,8 @@ not a multiple of shorter object length</code></pre>
 <td style="text-align: left;">Tested</td>
 <td style="text-align: left;">Cycling cells</td>
 <td style="text-align: right;">128</td>
-<td style="text-align: right;">106</td>
-<td style="text-align: right;">82.8</td>
+<td style="text-align: right;">120</td>
+<td style="text-align: right;">93.8</td>
 <td style="text-align: right;">0.00091</td>
 <td style="text-align: right;">1.040</td>
 <td style="text-align: right;">0.957</td>
@@ -2193,8 +2193,8 @@ not a multiple of shorter object length</code></pre>
 <td style="text-align: left;">Tested</td>
 <td style="text-align: left;">Tumour MES-like (hypoxic)</td>
 <td style="text-align: right;">220</td>
-<td style="text-align: right;">182</td>
-<td style="text-align: right;">82.7</td>
+<td style="text-align: right;">188</td>
+<td style="text-align: right;">85.5</td>
 <td style="text-align: right;">0.00069</td>
 <td style="text-align: right;">1.031</td>
 <td style="text-align: right;">0.975</td>
@@ -2203,8 +2203,8 @@ not a multiple of shorter object length</code></pre>
 <td style="text-align: left;">Tested</td>
 <td style="text-align: left;">Unclear</td>
 <td style="text-align: right;">170</td>
-<td style="text-align: right;">125</td>
-<td style="text-align: right;">73.5</td>
+<td style="text-align: right;">115</td>
+<td style="text-align: right;">67.6</td>
 <td style="text-align: right;">0.00161</td>
 <td style="text-align: right;">1.030</td>
 <td style="text-align: right;">0.987</td>
@@ -2213,48 +2213,48 @@ not a multiple of shorter object length</code></pre>
 <td style="text-align: left;">Tested</td>
 <td style="text-align: left;">Tumour MES-like</td>
 <td style="text-align: right;">600</td>
-<td style="text-align: right;">435</td>
-<td style="text-align: right;">72.5</td>
+<td style="text-align: right;">296</td>
+<td style="text-align: right;">49.3</td>
 <td style="text-align: right;">0.00053</td>
 <td style="text-align: right;">1.017</td>
 <td style="text-align: right;">0.989</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Tested</td>
-<td style="text-align: left;">Inhibitory neurons</td>
-<td style="text-align: right;">153</td>
-<td style="text-align: right;">101</td>
-<td style="text-align: right;">66.0</td>
-<td style="text-align: right;">0.00043</td>
-<td style="text-align: right;">1.003</td>
-<td style="text-align: right;">0.997</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Tested</td>
-<td style="text-align: left;">Excitatory neurons</td>
-<td style="text-align: right;">709</td>
-<td style="text-align: right;">434</td>
-<td style="text-align: right;">61.2</td>
-<td style="text-align: right;">0.00061</td>
-<td style="text-align: right;">1.001</td>
-<td style="text-align: right;">0.997</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Tested</td>
 <td style="text-align: left;">OPC</td>
 <td style="text-align: right;">92</td>
-<td style="text-align: right;">56</td>
-<td style="text-align: right;">60.9</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">16.3</td>
 <td style="text-align: right;">0.00062</td>
 <td style="text-align: right;">1.006</td>
 <td style="text-align: right;">0.999</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Tested</td>
+<td style="text-align: left;">Excitatory neurons</td>
+<td style="text-align: right;">709</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">2.1</td>
+<td style="text-align: right;">0.00061</td>
+<td style="text-align: right;">1.001</td>
+<td style="text-align: right;">0.997</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Tested</td>
+<td style="text-align: left;">Inhibitory neurons</td>
+<td style="text-align: right;">153</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">0.00043</td>
+<td style="text-align: right;">1.003</td>
+<td style="text-align: right;">0.997</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Tested</td>
 <td style="text-align: left;">Astrocytes</td>
 <td style="text-align: right;">88</td>
-<td style="text-align: right;">39</td>
-<td style="text-align: right;">44.3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.1</td>
 <td style="text-align: right;">0.00048</td>
 <td style="text-align: right;">0.998</td>
 <td style="text-align: right;">1.001</td>
@@ -2282,7 +2282,7 @@ not a multiple of shorter object length</code></pre>
 <h2 class="anchored" data-anchor-id="investigation-of-the-chromosome-12-signal"><strong>Investigation of the chromosome 12 signal</strong></h2>
 <p>A chromosome 12 signal was visible in the infereed tumor profil. Because the CDK4 / MDM2 region (12q14-15 –&gt; chromosome 12), are recurrently amplified in glioblastoma. We check the expression of these genes.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb418"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb418-1"><a href="#cb418-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sobjFiltrd, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"MDM2"</span>, <span class="st">"CDK4"</span>), <span class="at">group.by =</span> <span class="st">"celltype"</span>, <span class="at">pt.size =</span> <span class="dv">0</span>, <span class="at">ncol =</span> <span class="dv">1</span>) <span class="sc">&amp;</span> <span class="fu">RotatedAxis</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb416"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb416-1"><a href="#cb416-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sobjFiltrd, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"MDM2"</span>, <span class="st">"CDK4"</span>), <span class="at">group.by =</span> <span class="st">"celltype"</span>, <span class="at">pt.size =</span> <span class="dv">0</span>, <span class="at">ncol =</span> <span class="dv">1</span>) <span class="sc">&amp;</span> <span class="fu">RotatedAxis</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -2292,12 +2292,12 @@ not a multiple of shorter object length</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb419"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb419-1"><a href="#cb419-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate mean expression values for the candidate chr12 genes</span></span>
-<span id="cb419-2"><a href="#cb419-2" aria-hidden="true" tabindex="-1"></a>chr12_expression_summary <span class="ot">&lt;-</span> <span class="fu">FetchData</span>(sobjFiltrd,<span class="at">vars =</span> <span class="fu">c</span>(<span class="st">"MDM2"</span>,<span class="st">"CDK4"</span>,<span class="st">"celltype"</span>),</span>
-<span id="cb419-3"><a href="#cb419-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">layer =</span> <span class="st">"data"</span>) <span class="sc">%&gt;%</span> <span class="fu">group_by</span>(celltype) <span class="sc">%&gt;%</span> <span class="fu">summarise</span>(<span class="at">mean_MDM2 =</span> <span class="fu">round</span>(<span class="fu">mean</span>(MDM2), <span class="dv">3</span>),</span>
-<span id="cb419-4"><a href="#cb419-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_CDK4 =</span> <span class="fu">round</span>(<span class="fu">mean</span>(CDK4), <span class="dv">3</span>),<span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
-<span id="cb419-5"><a href="#cb419-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb419-6"><a href="#cb419-6" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(chr12_expression_summary,<span class="at">caption =</span> <span class="st">"Expression of candidate chromosome 12 genes"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb417"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb417-1"><a href="#cb417-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate mean expression values for the candidate chr12 genes</span></span>
+<span id="cb417-2"><a href="#cb417-2" aria-hidden="true" tabindex="-1"></a>chr12_expression_summary <span class="ot">&lt;-</span> <span class="fu">FetchData</span>(sobjFiltrd,<span class="at">vars =</span> <span class="fu">c</span>(<span class="st">"MDM2"</span>,<span class="st">"CDK4"</span>,<span class="st">"celltype"</span>),</span>
+<span id="cb417-3"><a href="#cb417-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">layer =</span> <span class="st">"data"</span>) <span class="sc">%&gt;%</span> <span class="fu">group_by</span>(celltype) <span class="sc">%&gt;%</span> <span class="fu">summarise</span>(<span class="at">mean_MDM2 =</span> <span class="fu">round</span>(<span class="fu">mean</span>(MDM2), <span class="dv">3</span>),</span>
+<span id="cb417-4"><a href="#cb417-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_CDK4 =</span> <span class="fu">round</span>(<span class="fu">mean</span>(CDK4), <span class="dv">3</span>),<span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb417-5"><a href="#cb417-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb417-6"><a href="#cb417-6" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(chr12_expression_summary,<span class="at">caption =</span> <span class="st">"Expression of candidate chromosome 12 genes"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small">
 <caption>Expression of candidate chromosome 12 genes</caption>
@@ -2392,11 +2392,11 @@ not a multiple of shorter object length</code></pre>
 <h2 class="anchored" data-anchor-id="saving-the-cnv-annotated-object">Saving the CNV-annotated object</h2>
 <p>The CNV measurements and operational malignant status were stored in the Seurat metadata for the tumour-state, microenvironment and cell–cell communication analyses</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb420"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb420-1"><a href="#cb420-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the output path and save the CNV-annotated Seurat object</span></span>
-<span id="cb420-2"><a href="#cb420-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(sobjFiltrd, <span class="at">file =</span> <span class="fu">paste0</span>(<span class="st">'../data/processed_data/'</span>, sample.name, <span class="st">'_CNV.rda'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb418"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb418-1"><a href="#cb418-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the output path and save the CNV-annotated Seurat object</span></span>
+<span id="cb418-2"><a href="#cb418-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(sobjFiltrd, <span class="at">file =</span> <span class="fu">paste0</span>(<span class="st">'../data/processed_data/'</span>, sample.name, <span class="st">'_CNV.rda'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb421"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb421-1"><a href="#cb421-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb419"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb419-1"><a href="#cb419-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.4.3 (2025-02-28 ucrt)
 Platform: x86_64-w64-mingw32/x64

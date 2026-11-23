@@ -1,7 +1,9 @@
 ---
-title: "Glioblastoma_scRNAseq_TME"
+title: "Glioblastoma scRNA-seq - Tumour Microenvironment"
 format: html
 editor: visual
+execute:
+  warning: false
 ---
 
 ```{r}
@@ -19,17 +21,19 @@ suppressPackageStartupMessages({
 sample.name <- "brain_DV200"
 ```
 
-**The tumour microenvironment (TME)**
+## The tumour microenvironment (TME)
 
 In glioblastoma, the main non-tumour cells are the **tumour-associated macrophages (TAMs)**. They come from two origins : **microglia** (the resident macrophages of the brain) and **bone marrow-derived macrophages (BDM)** recruited from the blood. BDM are often linked to a more immunosuppressive environment. We also look at the few T cells : glioblastoma is a "cold" tumour with few, often exhausted, T cells.
 
 ```{r}
 load(paste0('../data/processed_data/', sample.name, '_STATES.rda'))
 
-# myeloid cells not called malignant by inferCNV
+# Myeloid cells not called malignant by inferCNV
 myeloid <- subset(sobjFiltrd, subset = celltype == "Myeloid" & cnv_status == "Normal")
 ncol(myeloid)
 ```
+
+`r ncol(myeloid)` myeloid cells were retained for the analysis of the TAMs.
 
 ## Origin of the TAMs : microglia or BDM ?
 
@@ -49,12 +53,13 @@ myeloid$score_BDM <- myeloid$origin_2
 myeloid$origin <- ifelse(myeloid$score_microglia > myeloid$score_BDM, "Microglia-like", "BDM-like")
 
 table(myeloid$origin)
+pct_bdm <- round(100 * mean(myeloid$origin == "BDM-like"))
 
 ggplot(myeloid@meta.data, aes(x = score_BDM, y = score_microglia, colour = origin)) +
   geom_point(size = 0.6) + geom_abline(linetype = "dashed") + theme_classic()
 ```
 
-**Observation** : about 2/3 of the TAMs look BDM-like and 1/3 microglia-like. A large share of recruited macrophages is typical of glioblastoma. The two scores form a continuum rather than two separate groups, so the split is approximate (FCN1 is not in the probe panel).
+**Observation**: `r pct_bdm`% of the TAMs look BDM-like and `r 100 - pct_bdm`% microglia-like. A substantial share of recruited macrophages is typical of glioblastoma. The two scores form a continuum rather than two separate groups, so the split is approximate (FCN1 is not in the probe panel).
 
 ## Sub-populations of TAMs
 
@@ -92,9 +97,9 @@ DotPlot(myeloid, features = tam_markers) + RotatedAxis() +
   theme(strip.text.x = element_text(angle = 90, hjust = 0, size = 9))
 ```
 
-**Quality check of the sub-clusters**
+### Quality check of the sub-clusters
 
-Sub-cluster 1 has far fewer genes than the others and expresses tumour / glial genes, so we check its quality.
+The library size, the detection of tumour genes (GFAP, SOX2) and the CNV signal were compared between the sub-clusters, to verify that none of them is driven by tumour RNA or by malignant cells.
 
 ```{r}
 tam_qc <- myeloid@meta.data %>%
@@ -110,33 +115,19 @@ tam_qc <- myeloid@meta.data %>%
             median_chr7_minus_chr10 = round(median(chr7_minus_chr10), 3))
 
 knitr::kable(tam_qc)
+
+# Quantities used in the text
+gfap_range <- range(tam_qc$pct_GFAP)
+sox2_range <- range(tam_qc$pct_SOX2)
+chr_range <- range(tam_qc$median_chr7_minus_chr10)
+highest_gfap <- tam_qc$subcluster[which.max(tam_qc$pct_GFAP)]
 ```
 
-GFAP is detected in most myeloid cells of every sub-cluster : GFAP is one of the most abundant transcripts of the tumour, so this is likely **ambient RNA** (free RNA from lysed tumour cells captured with the macrophages), common in FFPE / dissociated tissue. Sub-cluster 1 is more affected : half the genes and UMI of the others, GFAP in almost all cells and SOX2 in 21%, but no CNV signal (and scDblFinder doublets were already removed in the QC). It is probably made of low quality macrophages with a high fraction of ambient tumour RNA (or phagocytosed tumour material), not a true TAM type.
+GFAP, one of the most abundant transcripts of the tumour, was detected in `r gfap_range[1]` to `r gfap_range[2]`% of the cells of the sub-clusters, and SOX2 in `r sox2_range[1]` to `r sox2_range[2]`%. The median chr7 - chr10 contrast of the sub-clusters ranged from `r chr_range[1]` to `r chr_range[2]`, so they do not carry the tumour CNV signal. The tumour RNA of the sample was corrected with SoupX during the quality control. The residual detection of tumour genes in macrophages can come from remaining ambient RNA or from phagocytosed tumour material; it is highest in sub-cluster `r highest_gfap`, whose profile is interpreted with caution.
 
-**Annotation of the TAM sub-clusters**
+### Markers of the TAM sub-clusters
 
-```{r}
-tam_labels <- c("0" = "Microglia-like TAM",
-                "1" = "Low quality / ambient RNA",
-                "2" = "Hypoxic TAM",
-                "3" = "MRC1+ BDM")
-myeloid$tam_type <- unname(tam_labels[as.character(myeloid$seurat_clusters)])
-
-DimPlot(myeloid, group.by = "tam_type", label = TRUE, repel = TRUE)
-```
-
--   **0 - Microglia-like TAM** : microglia markers (P2RY12, TMEM119, CX3CR1), TREM2, some CCL3 / CCL4 (activated microglia).
-
--   **2 - Hypoxic TAM** : VEGFA, ADM, SLC2A1, EGLN3, CXCL8, high SPP1, almost all BDM-like. These macrophages share the hypoxia program of the MES-like tumour cells, they probably live in the same hypoxic areas.
-
--   **3 - MRC1+ BDM** : CD163, MRC1 (CD206), SIGLEC1, LYZ, APOE, some CLEC10A / CD209. Monocyte-derived macrophages with an anti-inflammatory / immunosuppressive profile.
-
--   Overall, pro-inflammatory genes (IL1B, TNF) are low and immunosuppressive genes (CD163, SPP1, MRC1) are high : **the TAMs of this tumour lean towards an immunosuppressive profile**, as usually described in glioblastoma.
-
-## GO enrichment of the TAM sub-populations
-
-Same approach as for the tumour states : genes over-expressed in each sub-cluster vs the other myeloid cells, GO Biological Process with g:Profiler, background = genes detected in the myeloid cells.
+Genes over-expressed in each sub-cluster compared with the other myeloid cells were identified; they were used to name the sub-clusters and for the GO enrichment.
 
 ```{r}
 tam_deg <- FindAllMarkers(myeloid, only.pos = TRUE, min.pct = 0.25,
@@ -147,6 +138,59 @@ table(tam_deg$cluster)
 tam_deg %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 10) %>%
   summarise(top_genes = paste(gene, collapse = ", "))
 ```
+
+### Annotation of the TAM sub-clusters
+
+```{r}
+# Assign the labels of the sub-clusters
+tam_labels <- c("0" = "Microglia-like TAM",
+                "1" = "SPP1+ BDM-like TAM",
+                "2" = "MRC1+ BDM",
+                "3" = "Hypoxic TAM")
+
+# Stop if the labels do not cover exactly the current sub-clusters
+stopifnot(setequal(names(tam_labels), levels(myeloid$seurat_clusters)))
+
+# Audit table: size, strongest markers and assigned label of each sub-cluster
+tam_audit <- tam_deg %>%
+  group_by(cluster) %>%
+  slice_max(avg_log2FC, n = 4, with_ties = FALSE) %>%
+  summarise(top_markers = paste(gene, collapse = ", ")) %>%
+  mutate(cells = as.integer(table(myeloid$seurat_clusters)[as.character(cluster)]),
+         label = tam_labels[as.character(cluster)])
+tam_audit
+
+myeloid$tam_type <- unname(tam_labels[as.character(myeloid$seurat_clusters)])
+
+DimPlot(myeloid, group.by = "tam_type", label = TRUE, repel = TRUE)
+```
+
+```{r}
+# Share of BDM-like cells per sub-cluster, for the text
+bdm_by_sub <- setNames(tam_qc$pct_BDM_like, as.character(tam_qc$subcluster))
+
+# Mean expression of pro-inflammatory and immunosuppressive genes in all TAMs
+tam_data <- GetAssayData(myeloid, layer = "data")
+proinflammatory <- intersect(c("IL1B", "TNF"), rownames(myeloid))
+immunosuppressive <- intersect(c("CD163", "SPP1", "MRC1"), rownames(myeloid))
+mean_proinf <- round(mean(Matrix::rowMeans(tam_data[proinflammatory, , drop = FALSE])), 2)
+mean_immunosupp <- round(mean(Matrix::rowMeans(tam_data[immunosuppressive, , drop = FALSE])), 2)
+```
+
+-   **0 - Microglia-like TAM** (`r bdm_by_sub[["0"]]`% BDM-like): the markers include P2RY12, CH25H, CCL3L1 and PLD4, a microglial and activated profile.
+
+-   **1 - SPP1+ BDM-like TAM** (`r bdm_by_sub[["1"]]`% BDM-like): the markers include SPP1, APOC2, SLC7A5 and TNFRSF11B. This label is provisional and rests on these genes.
+
+-   **2 - MRC1+ BDM** (`r bdm_by_sub[["2"]]`% BDM-like): the markers include CLEC10A, SIGLEC1, CD209 and ALDH1A1, a monocyte-derived macrophage profile.
+
+-   **3 - Hypoxic TAM** (`r bdm_by_sub[["3"]]`% BDM-like): the markers include ADM, TRIB3, SLC2A1, CXCL8 and PLOD2. These macrophages share the hypoxia programme of the MES-like tumour cells, and they probably live in the same hypoxic areas.
+
+-   Overall, the mean log-normalised expression of the pro-inflammatory genes (`r paste(proinflammatory, collapse = ", ")`) was `r mean_proinf` and that of the immunosuppressive genes (`r paste(immunosuppressive, collapse = ", ")`) was `r mean_immunosupp`, which indicates `r ifelse(mean_immunosupp > mean_proinf, "a TAM population leaning towards an immunosuppressive profile, as usually described in glioblastoma", "no clear immunosuppressive profile")`.
+
+## GO enrichment of the TAM sub-populations
+
+Same approach as for the tumour states: the genes over-expressed in each sub-cluster (above) were used for a GO Biological Process enrichment with g:Profiler, with the genes detected in the myeloid cells as background.
+
 
 ```{r}
 detected_myeloid <- rownames(myeloid)[Matrix::rowSums(GetAssayData(myeloid, layer = "counts") > 0) >= 10]
@@ -174,17 +218,31 @@ ggplot(top_go_tam, aes(x = -log10(p_value), y = reorder(term_name, -log10(p_valu
   labs(x = "-log10(adjusted p-value)", y = NULL, size = "Genes")
 ```
 
-**Observations**
+### Observations
 
--   **Sub-cluster 0 (microglia-like)** and **3 (MRC1+ BDM)** : immune response, leukocyte activation, cytokine production, inflammatory response. These are the expected macrophage functions.
+```{r}
+# Top specific GO terms per sub-cluster (general terms removed), for the text
+top_terms_tam <- go_tam_res %>%
+  filter(term_size <= 500) %>%
+  group_by(query) %>%
+  slice_min(p_value, n = 3, with_ties = FALSE) %>%
+  summarise(terms = paste(term_name, collapse = "; "))
+top_terms_tam <- setNames(top_terms_tam$terms, top_terms_tam$query)
+```
 
--   **Sub-cluster 2 (hypoxic TAM)** : response to hypoxia and regulation of cell death, which confirms the hypoxic profile seen with the markers.
+-   **Sub-cluster 0 (microglia-like TAM)**: `r top_terms_tam[["0"]]`.
 
--   **Sub-cluster 1** : nervous system development and oxidative phosphorylation, i.e. not macrophage functions. This supports the idea that its signal comes from ambient tumour / brain RNA, so we don't interpret it biologically.
+-   **Sub-cluster 1 (SPP1+ BDM-like TAM)**: `r top_terms_tam[["1"]]`.
+
+-   **Sub-cluster 2 (MRC1+ BDM)**: `r top_terms_tam[["2"]]`.
+
+-   **Sub-cluster 3 (hypoxic TAM)**: `r top_terms_tam[["3"]]`.
+
+The terms were read together with the marker genes of each sub-cluster, which show a hypoxia programme in sub-cluster 3.
 
 ## T cells
 
-Only \~50 cells, so this is indicative. We look at the type (CD8 / CD4 / regulatory), cytotoxicity, and exhaustion markers (PDCD1 = PD-1, HAVCR2 = TIM-3, LAG3, TOX, CTLA4).
+Only `r sum(sobjFiltrd$celltype == "T/NK cells")` T/NK cells were annotated, so this is indicative. We look at the type (CD8 / CD4 / regulatory), cytotoxicity, and exhaustion markers (PDCD1 = PD-1, HAVCR2 = TIM-3, LAG3, TOX, CTLA4).
 
 ```{r}
 #| fig-width: 10
@@ -204,22 +262,28 @@ DotPlot(tcells, features = t_markers, group.by = "orig.ident") + RotatedAxis() +
   theme(strip.text.x = element_text(angle = 90, hjust = 0, size = 9))
 
 # % of T cells expressing each marker
-round(100 * Matrix::rowMeans(GetAssayData(tcells, layer = "counts")[unlist(t_markers), ] > 0))
+t_pct <- round(100 * Matrix::rowMeans(GetAssayData(tcells, layer = "counts")[unlist(t_markers), ] > 0))
+t_pct
+
+# Number of cells expressing FOXP3
+n_foxp3 <- sum(GetAssayData(tcells, layer = "counts")["FOXP3", ] > 0)
 ```
 
-**Observations (46 cells, indicative only)**
+### Observations
 
--   A mix of CD8 (\~46% of cells) and CD4 (\~35%) T cells, with very few regulatory T cells (FOXP3 in \~9%, i.e. 4 cells).
+These observations are indicative only (`r ncol(tcells)` cells).
 
--   Cytotoxic genes are present (GZMA \~57%, NKG7 \~52%, PRF1 \~35%) but IFNG is almost absent (\~2%) and no cell is proliferating (MKI67 0%).
+-   A mix of CD8 (CD8A in `r t_pct[["CD8A"]]`% of the cells) and CD4 (`r t_pct[["CD4"]]`%) T cells, with few regulatory T cells (FOXP3 in `r t_pct[["FOXP3"]]`%, i.e. `r n_foxp3` cells).
 
--   Exhaustion markers are found in a part of the cells (PD-1 \~26%, TIM-3 \~20%, LAG3 and CTLA4 \~17%, TOX \~13%).
+-   Cytotoxic genes are present (GZMA `r t_pct[["GZMA"]]`%, NKG7 `r t_pct[["NKG7"]]`%, PRF1 `r t_pct[["PRF1"]]`%), IFNG is detected in `r t_pct[["IFNG"]]`% of the cells and MKI67 in `r t_pct[["MKI67"]]`%.
 
--   Few T cells, with cytotoxic potential but little IFNG, no proliferation and some exhaustion markers : this fits the "cold", poorly active immune environment described in glioblastoma. With 46 cells this remains a hint, not a conclusion.
+-   Exhaustion markers are found in a part of the cells (PD-1 `r t_pct[["PDCD1"]]`%, TIM-3 `r t_pct[["HAVCR2"]]`%, LAG3 `r t_pct[["LAG3"]]`%, CTLA4 `r t_pct[["CTLA4"]]`%, TOX `r t_pct[["TOX"]]`%).
 
-**Limits**
+-   Few T cells, with cytotoxic potential, little IFNG and little proliferation, together with exhaustion markers, fit the "cold", poorly active immune environment described in glioblastoma. With `r ncol(tcells)` cells this remains a hint, not a conclusion.
 
--   Ambient tumour RNA is present in the immune cells (e.g. GFAP), it can blur the profiles.
+### Limits
+
+-   A residual tumour signal remains in the TAMs after the SoupX correction (GFAP detected in `r gfap_range[1]` to `r gfap_range[2]`% of the cells of the sub-clusters), which can blur their profiles.
 
 -   The origin (microglia vs BDM) is based on a few markers and forms a continuum.
 

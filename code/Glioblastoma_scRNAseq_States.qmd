@@ -1,7 +1,9 @@
 ---
-title: "Glioblastoma_scRNAseq_States"
+title: "Glioblastoma scRNA-seq - Tumour States (Neftel et al.)"
 format: html
 editor: visual
+execute:
+  warning: false
 ---
 
 ```{r}
@@ -12,6 +14,7 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(ggplot2)
   library(readxl)
+  library(gprofiler2)
 })
 ```
 
@@ -19,11 +22,11 @@ suppressPackageStartupMessages({
 sample.name <- "brain_DV200"
 ```
 
-**Which tumour states are present ?**
+## Which tumour states are present?
 
 Neftel et al. (Cell, 2019) showed that glioblastoma cells are found in 4 main states : **MES-like** (mesenchymal), **AC-like** (astrocyte), **OPC-like** (oligodendrocyte progenitor) and **NPC-like** (neural progenitor). Each state is defined by a gene list (meta-module), MES and NPC are split in two (MES1/MES2, NPC1/NPC2). We score our malignant cells with these lists to see which states dominate this tumour.
 
-we reload the object with the CNV results and keep only the malignant cells (confirmed by inferCNV)
+The object with the CNV results was reloaded, and the cells classified as malignant by inferCNV were kept. This selection can include a few normal cells above the CNV threshold, which appear in the cluster composition below.
 
 ```{r}
 load(paste0('../data/processed_data/', sample.name, '_CNV.rda'))
@@ -33,7 +36,7 @@ ncol(tumour)
 table(tumour$celltype)
 ```
 
-**Neftel gene lists**
+### Neftel gene lists
 
 Table S2 of the paper (meta-module gene lists, up to 50 genes per module, plus two cell cycle modules G1/S and G2/M).
 
@@ -42,16 +45,18 @@ s2 <- read_excel("../data/reference/NIHMS1532254-supplement-9.xlsx", skip = 4)
 modules <- lapply(as.list(s2), function(g) unique(na.omit(g)))
 names(modules) <- gsub("/", "_", names(modules))  # G1/S -> G1_S
 
-# how many genes of each module are measured in our data (Flex probe panel)
-data.frame(
+# Number of genes of each module measured in the data (Flex probe panel)
+module_coverage <- data.frame(
   module = names(modules),
   n_genes = lengths(modules),
   n_in_data = sapply(modules, function(g) sum(g %in% rownames(tumour))))
+module_coverage$pct_in_data <- round(100 * module_coverage$n_in_data / module_coverage$n_genes)
+module_coverage
 ```
 
-84 to 100% of the genes of each module are measured in our data, so the Flex probe panel is not a problem for the scores.
+Between `r min(module_coverage$pct_in_data)` and `r max(module_coverage$pct_in_data)`% of the genes of each module are measured in the data, so the Flex probe panel covers most of every module.
 
-**Scores**
+### Scores
 
 Neftel score = mean relative expression of the module genes minus the mean of a control gene set with the same expression level (30 bins, 100 control genes per gene). This is what `AddModuleScore` does. Scores are computed on the malignant cells only, as in the paper.
 
@@ -67,7 +72,7 @@ score_cols <- paste0("neftel_", seq_along(modules))
 names(tumour@meta.data)[match(score_cols, names(tumour@meta.data))] <- paste0("score_", names(modules))
 ```
 
-**State assignment**
+### State assignment
 
 Each cell is assigned to the meta-module with the highest score (cell cycle modules excluded), then MES1/MES2 are merged into MES-like and NPC1/NPC2 into NPC-like.
 
@@ -84,7 +89,7 @@ table(tumour$neftel_state)
 round(100 * prop.table(table(tumour$neftel_state)), 1)
 ```
 
-**Cycling cells**
+### Cycling cells
 
 As in the paper, the distribution of each cell cycle score is fitted to a normal distribution, a cell is cycling if its G1/S or G2/M score is above the P \< 0.001 threshold.
 
@@ -95,7 +100,7 @@ tumour$cycling <- is_high(tumour$score_G1_S) | is_high(tumour$score_G2_M)
 table(tumour$neftel_state, tumour$cycling)
 ```
 
-**Results per state**
+### Results per state
 
 ```{r}
 state_summary <- tumour@meta.data %>%
@@ -109,17 +114,32 @@ state_summary <- tumour@meta.data %>%
 knitr::kable(state_summary, col.names = c("Neftel state", "n", "% of tumour cells", "% cycling", "Main module"))
 ```
 
-**Interpretation**
+```{r}
+# Quantities used in the interpretation
+pct_state <- setNames(state_summary$pct_tumour, state_summary$neftel_state)
+n_state <- setNames(state_summary$n, state_summary$neftel_state)
+cycling_state <- setNames(state_summary$pct_cycling, state_summary$neftel_state)
 
--   **This tumour is dominated by MES-like (\~40%) and NPC-like (\~33%) cells, with a large AC-like part (\~26%)**. OPC-like cells are almost absent (\~1%, 18 cells).
+n_cycling <- sum(tumour$cycling)
+pct_cycling_npc <- round(100 * sum(tumour$cycling & tumour$neftel_state == "NPC-like") / n_cycling)
 
--   MES1 is more frequent than MES2. In the paper, MES2 is the module linked to hypoxia (its top gene is HILPDA, a hypoxia-induced gene).
+n_mes1 <- sum(tumour$neftel_module == "MES1")
+n_mes2 <- sum(tumour$neftel_module == "MES2")
 
--   **Cycling cells are mostly NPC-like** (\~10% of NPC-like cells vs \~2-3% of MES-like and AC-like). This agrees with Neftel et al., where cycling is highest in the OPC-like and NPC-like states.
+opc_source <- sort(table(tumour$celltype[tumour$neftel_state == "OPC-like"]), decreasing = TRUE)
+```
 
--   The 18 OPC-like cells mostly come from the OPC cluster, where inferCNV called only 16% of the cells malignant. They may be normal OPC slightly above the CNV threshold, so we don't interpret this state.
+### Interpretation
 
-**Two-dimensional representation (Neftel Figure 3)**
+-   **This tumour is dominated by MES-like (`r pct_state["MES-like"]`%) and NPC-like (`r pct_state["NPC-like"]`%) cells, with a large AC-like part (`r pct_state["AC-like"]`%)**. OPC-like cells are few (`r pct_state["OPC-like"]`%, `r n_state["OPC-like"]` cells).
+
+-   `r n_mes1` cells were assigned to MES1 and `r n_mes2` to MES2. In the paper, MES2 is the module linked to hypoxia (its top gene is HILPDA, a hypoxia-induced gene).
+
+-   **Cycling cells are mostly NPC-like** (`r pct_cycling_npc`% of the `r n_cycling` cycling cells). The cycling fraction is `r cycling_state["NPC-like"]`% of the NPC-like cells against `r cycling_state["MES-like"]`% of the MES-like and `r cycling_state["AC-like"]`% of the AC-like cells. This agrees with Neftel et al., where cycling is highest in the OPC-like and NPC-like states.
+
+-   The OPC-like cells come mainly from the `r names(opc_source)[1]` population (`r opc_source[[1]]` of `r sum(opc_source)` cells). As this state is small, it is described but not interpreted quantitatively.
+
+### Two-dimensional representation (Neftel Figure 3)
 
 -   y-axis : D = max(OPC, NPC) - max(AC, MES), D \> 0 for OPC/NPC cells and D \< 0 for AC/MES cells
 
@@ -160,17 +180,30 @@ ggplot(md[order(md$cycling), ], aes(x = x, y = D, colour = cycling)) +
   labs(x = "Relative meta-module score", y = "D", colour = "Cycling")
 ```
 
-**Observations on the 2D plots**
+```{r}
+# Composition of each cluster in Neftel states (rows sum to 100)
+cluster_state_pct <- round(100 * prop.table(table(cluster = tumour$celltype,
+                                                  neftel = tumour$neftel_state), margin = 1))
 
--   **The NPC-like cells form a distinct group** in the top-right quadrant, which matches the Tumour NPC-like cluster.
+# Median gap between the best and the second best module score
+top2_gap <- apply(sc, 1, function(x) {
+  v <- sort(x, decreasing = TRUE)
+  v[1] - v[2]
+})
+median_gap <- round(median(top2_gap), 2)
+```
 
--   **The AC-like and MES-like cells form a continuum** in the bottom half : there is no gap between the two states, cells are spread from AC-like to MES-like. The Tumour MES-like cluster covers both quadrants (60% MES-like, 38% AC-like). This fits the AC/MES plasticity described by Neftel et al. : GBmap called this whole cluster MES-like, the Neftel scores show it also contains an AC-like component.
+### Observations on the 2D plots
 
--   Many cells are close to the axes, i.e. between two states : the median difference between the best and the second best score is only \~0.19. We did not call hybrid cells, because the paper's criteria (e.g. a score \> 1) depend on their score scale (log2(TPM/10+1)), which is different from ours.
+-   **The NPC-like cells form a distinct group** in the top-right quadrant, which largely matches the Tumour NPC-like cluster.
+
+-   **The AC-like and MES-like cells form a continuum** in the bottom half: there is no gap between the two states, and cells are spread from AC-like to MES-like. The Tumour MES-like cluster covers both quadrants (`r cluster_state_pct["Tumour MES-like", "MES-like"]`% MES-like and `r cluster_state_pct["Tumour MES-like", "AC-like"]`% AC-like). This fits the AC/MES plasticity described by Neftel et al.: the Neftel scores show that this cluster contains an MES-like and an AC-like component.
+
+-   Many cells are close to the axes, i.e. between two states: the median difference between the best and the second best score is only `r median_gap`. Hybrid cells were not called, because the criteria of the paper (e.g. a score \> 1) depend on their score scale (log2(TPM/10+1)), which differs from ours.
 
 -   The cycling cells (red) are concentrated in the NPC-like quadrant.
 
-**Comparison with the clusters and GBmap**
+### Comparison with the cluster annotation
 
 ```{r}
 table(cluster = tumour$celltype, neftel = tumour$neftel_state)
@@ -179,25 +212,29 @@ DimPlot(tumour, group.by = "neftel_state", label = TRUE, repel = TRUE)
 FeaturePlot(tumour, features = paste0("score_", states), ncol = 3)
 ```
 
-**Observations**
+### Observations
 
--   Tumour NPC-like cluster : 74% NPC-like, the rest MES-like (16%) or AC-like (9%).
+-   Tumour NPC-like cluster: `r cluster_state_pct["Tumour NPC-like", "NPC-like"]`% NPC-like, the rest MES-like (`r cluster_state_pct["Tumour NPC-like", "MES-like"]`%) or AC-like (`r cluster_state_pct["Tumour NPC-like", "AC-like"]`%).
 
--   Tumour MES-like cluster : 60% MES-like and 38% AC-like, the AC-like cells are on one side of the cluster on the UMAP.
+-   Cycling cells: `r cluster_state_pct["Cycling cells", "NPC-like"]`% NPC-like, `r cluster_state_pct["Cycling cells", "MES-like"]`% MES-like and `r cluster_state_pct["Cycling cells", "AC-like"]`% AC-like.
 
--   Unclear cluster : a mix of all states (49% MES-like, 30% AC-like, 17% NPC-like), which fits low quality tumour cells with no clear identity.
+-   Tumour MES-like cluster: `r cluster_state_pct["Tumour MES-like", "MES-like"]`% MES-like and `r cluster_state_pct["Tumour MES-like", "AC-like"]`% AC-like; the AC-like cells are on one side of the cluster on the UMAP.
+
+-   Hypoxic MES-like cluster: `r cluster_state_pct["Tumour MES-like (hypoxic)", "MES-like"]`% MES-like.
+
+-   Unclear cluster: a mix of states (`r cluster_state_pct["Unclear", "MES-like"]`% MES-like, `r cluster_state_pct["Unclear", "AC-like"]`% AC-like, `r cluster_state_pct["Unclear", "NPC-like"]`% NPC-like).
 
 -   On the UMAP, the MES1/MES2 and AC scores overlap in the same area, while NPC1/NPC2 are higher in the NPC-like cluster.
 
-**Limits**
+### Limits
 
 -   The state of each cell is the module with the highest score, cells between two states are forced into one of them.
 
--   A single tumour : the proportions describe this sample only, and depend on the dissociation (some cell states may survive it better than others).
+-   A single sample: the proportions describe this sample only and may depend on the dissociation (some cell states may survive it better than others). The second dissociation of the same specimen is analysed in the comparison document.
 
 ## GO enrichment of the tumour states
 
-To see which biological processes characterise each state in this tumour, we look for the genes over-expressed in each state (vs the other malignant cells) and run a GO enrichment (Biological Process) with g:Profiler. OPC-like cells are excluded (only 18 cells).
+To see which biological processes characterise each state in this tumour, we look for the genes over-expressed in each state (vs the other malignant cells) and run a GO enrichment (Biological Process) with g:Profiler. OPC-like cells are excluded (only `r n_state["OPC-like"]` cells).
 
 ```{r}
 tumour_go <- subset(tumour, subset = neftel_state != "OPC-like")
@@ -215,8 +252,6 @@ state_markers %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 10) %>%
 The background (gene universe) is the set of genes detected in the malignant cells, not the whole genome : Flex only measures the genes of its probe panel, using the whole genome would bias the enrichment.
 
 ```{r}
-library(gprofiler2)
-
 detected <- rownames(tumour_go)[Matrix::rowSums(GetAssayData(tumour_go, layer = "counts") > 0) >= 10]
 
 gene_lists <- split(state_markers$gene, state_markers$cluster)
@@ -244,17 +279,37 @@ ggplot(top_go, aes(x = -log10(p_value), y = reorder(term_name, -log10(p_value)),
   labs(x = "-log10(adjusted p-value)", y = NULL, size = "Genes")
 ```
 
-**Observations**
+```{r}
+# Top specific GO terms per state (general terms removed), for the text
+top_terms <- go_res %>%
+  filter(term_size <= 500) %>%
+  group_by(query) %>%
+  slice_min(p_value, n = 3, with_ties = FALSE) %>%
+  summarise(terms = paste(term_name, collapse = "; "))
+top_terms_list <- setNames(top_terms$terms, top_terms$query)
 
--   **MES-like : hypoxia, angiogenesis and wound healing.** The strongest signal of the whole analysis (response to hypoxia, adjusted p \~ 1e-17). The top marker genes are classic hypoxia-induced genes (ADM, ANGPTL4, NDRG1, CA12, SERPINE1). Even if MES1 is the most frequent module, the MES-like cells of this tumour are clearly hypoxic, which fits the link between the MES state and hypoxia described by Neftel et al. They probably come from poorly oxygenated areas of the tumour (e.g. around necrosis).
+# Best hypoxia-related term of the MES-like state
+hypoxia_terms <- go_res %>%
+  filter(query == "MES-like", grepl("hypoxi|oxygen", term_name, ignore.case = TRUE))
+hypoxia_text <- if (nrow(hypoxia_terms) > 0) {
+  paste0("the best hypoxia-related term had an adjusted p-value of ",
+         signif(min(hypoxia_terms$p_value), 2))
+} else {
+  "no hypoxia-related term was significant"
+}
+```
 
--   **AC-like : glial differentiation and gliogenesis.** The markers are astrocyte genes (ATP1A2, BCAN, KCNJ10, AQP1). Some myelination terms also come up, with fewer genes, they are probably driven by genes shared with oligodendrocyte lineage cells.
+### Observations
 
--   **NPC-like : neurogenesis and epigenetic regulation.** The markers are neuronal / developmental genes (CRABP1, ONECUT2, GRIK2, CPLX1). Cell cycle terms are also found in the full table, consistent with the high fraction of cycling cells in this state.
+-   **MES-like**: the most specific terms were `r top_terms_list[["MES-like"]]`, and `r hypoxia_text`. The top marker genes (ADM, SERPINE1, ANGPTL4, CA12, NDRG1) are classic hypoxia-induced genes. Even if MES1 is the most frequent module, the MES-like cells of this tumour show a hypoxic programme, which fits the link between the MES state and hypoxia described by Neftel et al. They probably come from poorly oxygenated areas of the tumour (e.g. around necrosis).
 
--   Overall, GO gives each state a coherent biological identity : **a hypoxic / angiogenic MES-like compartment, a glial AC-like compartment and a proliferating, neurodevelopmental NPC-like compartment.**
+-   **AC-like**: the most specific terms were `r top_terms_list[["AC-like"]]`. The markers are astrocyte genes (ATP1A2, BCAN, TTYH1, AQP1, NDRG2).
 
-**Limits of this enrichment**
+-   **NPC-like**: the most specific terms were `r top_terms_list[["NPC-like"]]`. The markers are neuronal and developmental genes (CRABP1, TAC3, CPLX1, GRIK2, MYCN, HES6).
+
+-   Overall, the marker genes give each state a coherent biological identity: **a hypoxic MES-like compartment, an astrocytic AC-like compartment and a neurodevelopmental NPC-like compartment**.
+
+### Limits of this enrichment
 
 -   Partly circular : the states are defined by gene lists, so the marker genes of each state overlap these lists. GO is used to describe the states, not to prove them.
 

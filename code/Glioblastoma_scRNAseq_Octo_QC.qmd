@@ -3,6 +3,8 @@ title: "Glioblastoma scRNA-seq - Quality Control of the Octo-Dissociated Sample"
 subtitle: "Glioblastoma FFPE Tissue Dissociated with the gentleMACS Octo Dissociator, Multiplexed Samples"
 format: html
 editor: visual
+execute:
+  warning: false
 ---
 
 ## Quality Check of the data
@@ -716,7 +718,7 @@ if (!is.null(manual_soupx)) {
     Manual = c(round(manual_soupx$rho, 3), manual_soupx$pct_removed),
     Octo = c(round(soupx_rho, 3), soupx_pct_removed)
   )
-  ambient_comparison
+  print(ambient_comparison)
 
   # Display the genes most affected by the correction in each sample
   cat("Manual:", paste(manual_soupx$top_genes, collapse = ", "), "\n")

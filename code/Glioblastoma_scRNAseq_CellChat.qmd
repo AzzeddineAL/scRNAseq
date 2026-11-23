@@ -179,7 +179,7 @@ DotPlot(cc_obj, features = c("CD47", "SIRPA", "CD274", "PDCD1", "OSM", "OSMR", "
 **Results of the hypotheses**
 
 | Hypothesis | CellChat | Result |
-|------------------------|------------------------|------------------------|
+|----|----|----|
 | SPP1 → CD44 (TAM → tumour) | Significant, strongest TAM → tumour signal | **Supported** : all TAM groups → MES-like and AC-like cells (prob \~0.3) |
 | VEGF (hypoxic niche → vascular) | Significant | **Supported** : VEGFA → FLT1 (VEGFR1), strongest from MES-like cells, then hypoxic TAMs |
 | OSM → OSMR (TAM → MES-like) | Not significant | **Not supported here** : OSMR is expressed by the MES-like cells, but OSM is only weakly expressed by the TAMs |

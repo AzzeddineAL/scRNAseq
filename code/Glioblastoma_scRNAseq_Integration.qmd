@@ -3,6 +3,8 @@ title: "Glioblastoma scRNA-seq - Integration of the Manual and Octo Samples"
 subtitle: "Glioblastoma FFPE Tissue Dissociated Manually or with the gentleMACS Octo Dissociator"
 format: html
 editor: visual
+execute:
+  warning: false
 ---
 
 ## Integration of the Manual and Octo samples
@@ -350,9 +352,9 @@ plot_cluster_freq(cluster_celltype_df, "Cell-type frequency per unintegrated clu
 
 Three integration approaches were applied to the principal-component embedding of the joint dataset, each producing a corrected low-dimensional embedding:
 
--   **Harmony** iteratively adjusts the position of the cells in the embedding with a soft clustering and a diversity penalty (`theta`); it was applied through the Seurat wrapper and through the standalone package.
--   **RPCA** aligns the samples with anchors found in reciprocal principal-component spaces, a conservative approach when populations are not fully shared.
--   **CCA** aligns the samples with anchors found in a canonical-correlation space, a stronger correction with a higher risk of over-correction.
+- **Harmony** iteratively adjusts the position of the cells in the embedding with a soft clustering and a diversity penalty (`theta`); it was applied through the Seurat wrapper and through the standalone package.
+- **RPCA** aligns the samples with anchors found in reciprocal principal-component spaces, a conservative approach when populations are not fully shared.
+- **CCA** aligns the samples with anchors found in a canonical-correlation space, a stronger correction with a higher risk of over-correction.
 
 Harmony was additionally run with three values of `theta` (1, 2 and 4) to document how the strength of the correction affects sample mixing and the conservation of the biology. All methods were run with their default parameters, on the same `r n_pcs` principal components.
 
@@ -445,14 +447,14 @@ The methods were evaluated on two complementary criteria, computed on the same `
 
 **Mixing of the samples** (the correction should remove the technical difference):
 
--   *iLISI* is the inverse Simpson index of the sample composition among the `r k_lisi` nearest neighbours of each cell. It was rescaled from 0 (neighbourhoods containing a single sample) to 1 (neighbourhoods containing both samples in equal proportions).
--   *Cluster deviation* is the mean absolute difference, weighted by cluster size, between the fraction of Octo cells in a cluster and the fraction of Octo cells in the whole dataset; 0 corresponds to a perfect mixing.
+- *iLISI* is the inverse Simpson index of the sample composition among the `r k_lisi` nearest neighbours of each cell. It was rescaled from 0 (neighbourhoods containing a single sample) to 1 (neighbourhoods containing both samples in equal proportions).
+- *Cluster deviation* is the mean absolute difference, weighted by cluster size, between the fraction of Octo cells in a cluster and the fraction of Octo cells in the whole dataset; 0 corresponds to a perfect mixing.
 
 **Conservation of the biology** (the correction should not merge distinct cell types):
 
--   *cLISI purity* is the inverse Simpson index of the cell-type composition among the nearest neighbours, rescaled from 0 (neighbourhoods containing all the cell types) to 1 (neighbourhoods containing a single cell type).
--   *ARI* is the adjusted Rand index between the clusters and the Manual annotation, computed on the Manual cells only, which are the only cells carrying an annotation rather than a transferred label.
--   *Silhouette* is the mean silhouette width of the cell types, averaged over the cell types, on a random subset of 2,000 cells.
+- *cLISI purity* is the inverse Simpson index of the cell-type composition among the nearest neighbours, rescaled from 0 (neighbourhoods containing all the cell types) to 1 (neighbourhoods containing a single cell type).
+- *ARI* is the adjusted Rand index between the clusters and the Manual annotation, computed on the Manual cells only, which are the only cells carrying an annotation rather than a transferred label.
+- *Silhouette* is the mean silhouette width of the cell types, averaged over the cell types, on a random subset of 2,000 cells.
 
 The LISI metrics were computed with a nearest-neighbour implementation with uniform weights, a simplified version of the original LISI that does not require an additional package.
 
@@ -556,6 +558,45 @@ p_bio <- ggplot(metrics_plot, aes(x = method, y = clisi_purity, fill = method)) 
 p_mix + p_bio
 ```
 
+### Context of the mixing metric
+
+The iLISI cannot reach its maximum when the samples differ in composition: in a cell type that is over-represented in one sample, even a perfectly mixed neighbourhood contains unequal proportions of the two samples. The maximal iLISI compatible with the observed composition was therefore computed, assuming a perfect mixing within each cell type. It is provided to interpret the metric and does not enter the selection rule. The observed iLISI of the unintegrated embedding was compared with this maximum in each cell type to locate the residual differences between the samples.
+
+```{r}
+# Maximal iLISI reachable given the composition of each cell type (two samples)
+composition_tab <- table(sobj$celltype, sobj$sample)
+f_octo <- composition_tab[, "Octo"] / rowSums(composition_tab)
+ceiling_by_type <- 1 / (f_octo^2 + (1 - f_octo)^2) - 1
+ilisi_ceiling <- sum(rowSums(composition_tab) * ceiling_by_type) / sum(composition_tab)
+
+# Observed iLISI of the unintegrated embedding in each cell type
+ilisi_unintegrated <- knn_lisi(Embeddings(sobj, "pca")[, 1:n_pcs], sobj$sample, k = k_lisi) - 1
+observed_by_type <- tapply(ilisi_unintegrated, sobj$celltype, mean)
+
+mixing_by_type <- data.frame(
+  cells = as.integer(rowSums(composition_tab)),
+  octo_fraction = round(f_octo, 2),
+  ceiling = round(ceiling_by_type, 3),
+  observed = round(observed_by_type[rownames(composition_tab)], 3),
+  row.names = rownames(composition_tab)
+)
+mixing_by_type$gap <- round(mixing_by_type$ceiling - mixing_by_type$observed, 3)
+mixing_by_type
+
+# Fraction of the reachable mixing obtained by each embedding
+data.frame(method = metrics_tbl$method, ilisi_norm = metrics_tbl$ilisi_norm,
+           fraction_of_ceiling = round(metrics_tbl$ilisi_norm / ilisi_ceiling, 3))
+```
+
+```{r}
+# Quantities used in the text
+ilisi_unint <- metrics_tbl$ilisi_norm[metrics_tbl$method == "Unintegrated"]
+ilisi_best <- max(metrics_tbl$ilisi_norm[metrics_tbl$method != "Unintegrated"])
+share_composition <- round(100 * (1 - ilisi_ceiling) / (1 - ilisi_unint), 0)
+```
+
+The composition-limited maximum of the normalised iLISI was `r round(ilisi_ceiling, 3)`. The unintegrated embedding reached `r round(100 * ilisi_unint / ilisi_ceiling, 1)`% of this maximum and the best integrated embedding `r round(100 * ilisi_best / ilisi_ceiling, 1)`%. The composition of the samples therefore accounts for `r share_composition`% of the distance between the unintegrated iLISI and a perfect mixing.
+
 ## Visual assessment
 
 The UMAP of each embedding was coloured by sample and by cell type. Well-integrated samples overlap within each cell type, while the cell types remain separated.
@@ -606,11 +647,19 @@ selected_method <- if (nrow(eligible) == 0) "Unintegrated" else
 selected_row <- methods_tbl[methods_tbl$method == selected_method, ]
 selected_reduction <- selected_row$reduction
 
+# Largest iLISI gain of an integrated embedding over the unintegrated one
+integrated_rows <- metrics_tbl$method != "Unintegrated"
+gains <- metrics_tbl$ilisi_norm[integrated_rows] - baseline$ilisi_norm
+max_gain <- max(gains)
+best_integrated <- metrics_tbl$method[integrated_rows][which.max(gains)]
+
 eligible
 cat("Selected embedding:", selected_method, "\n")
 ```
 
 The unintegrated embedding had a normalised iLISI of `r baseline$ilisi_norm`. The retained embedding was **`r selected_method`**, with a normalised iLISI of `r metrics_tbl$ilisi_norm[metrics_tbl$method == selected_method]`, a cLISI purity of `r metrics_tbl$clisi_purity[metrics_tbl$method == selected_method]` and an ARI of `r metrics_tbl$ari_manual[metrics_tbl$method == selected_method]`.
+
+The largest iLISI gain of an integrated embedding over the unintegrated one was `r round(max_gain, 3)` (`r best_integrated`), against the `r min_gain_mixing` required by the selection rule.
 
 The distribution of the samples within the clusters of the retained embedding was examined as for the unintegrated embedding.
 
@@ -638,7 +687,7 @@ plot_cluster_freq(selected_celltype_df,
 
 ### Scope and limits of the evaluation
 
-This evaluation compares embeddings obtained from two technical replicates of the same specimen, so it measures the sensitivity of the analysis to the dissociation method and not to a difference between patients. The conservation metrics rely on the Manual annotation and on the labels transferred to the Octo cells; the independent annotation of the Octo cells with the marker panel of the Manual sample is performed in the comparison document, and the agreement between the two annotations is reported there. The silhouette was computed on a subset of 2,000 cells with a fixed seed.
+This evaluation compares embeddings obtained from two samples of the same specimen, so it measures the sensitivity of the analysis to the dissociation method and not to a difference between patients. With one sample per method, a difference in composition combines the effect of the dissociation method and the heterogeneity between the two tissue preparations, and these two sources cannot be separated. The conservation metrics rely on the Manual annotation and on the labels transferred to the Octo cells; the independent annotation of the Octo cells with the marker panel of the Manual sample is performed in the comparison document, and the agreement between the two annotations is reported there. The cLISI purity varied by only `r round(diff(range(metrics_tbl$clisi_purity)), 3)` across the methods because its normalisation over `r n_labels` labels compresses it towards 1; the conservation of the biology was therefore also judged on the ARI and the silhouette. The silhouette was computed on a subset of 2,000 cells with a fixed seed.
 
 ## Saving the integrated object
 

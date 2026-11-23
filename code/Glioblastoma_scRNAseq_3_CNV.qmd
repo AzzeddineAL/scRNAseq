@@ -1,7 +1,9 @@
 ---
-title: "Glioblastoma_scRNAseq_CNV"
+title: "Glioblastoma scRNA-seq - Copy-Number Inference and Malignant-Cell Calling"
 format: html
 editor: visual
+execute:
+  warning: false
 ---
 
 ## Analyses Setup
@@ -16,7 +18,9 @@ the.seed <- 42
 set.seed(the.seed)
 
 
-Sys.setenv(JAGS_HOME="C:/Program Files/JAGS/JAGS-4.3.2")
+# Point rjags to the JAGS installation (Windows)
+jags_home <- "C:/Program Files/JAGS/JAGS-4.3.2"
+if (dir.exists(jags_home)) Sys.setenv(JAGS_HOME = jags_home)
 
 
 # Load the packages required for CNV inference and visualisation
@@ -41,7 +45,7 @@ Installation (run once) : on Windows, install JAGS first (<https://sourceforge.n
 #| eval: false
 
 # Run these commands only once when setting up the environment
-if(!requireNamespace("BiocManager", quietly = TRUE)) {installed.packages("BiocManager")}
+if(!requireNamespace("BiocManager", quietly = TRUE)) {install.packages("BiocManager")}
   
 install.packages("rjags")
 BiocManager::install("infercnv")
@@ -82,7 +86,7 @@ table(sobjFiltrd$celltype)
 
 inferCNV estimates a normal expression baseline from populations considered non-malignant. Immune and vascular populations are appropriate references because they are part of the tumour microenvironment but are not derived from the glioblastoma clone.
 
-Oligodendrocytes were also included because their canonical markers and GBmap classification supported a non-neoplastic identity.
+Oligodendrocytes were also included because their canonical markers (MOG, MOBP, PLP1) supported a non-neoplastic identity. The myeloid reference includes the myeloid cells resolved from the hypoxic cluster during the annotation, which carry immune and not tumour lineage markers.
 
 ```{r}
 # Define the cell populations used to estimate the normal CNV baseline
@@ -92,9 +96,7 @@ ref_groups <- c("Oligodendrocytes", "Myeloid", "T/NK cells", "Vascular")
 stopifnot(all(ref_groups %in% unique(as.character(sobjFiltrd$celltype))))
   
 # Display the number of cells in each reference population
-annotations <- data.frame(
-  row.names = colnames(sobjFiltrd),
-  celltype = as.character(sobjFiltrd$celltype))
+table(sobjFiltrd$celltype[sobjFiltrd$celltype %in% ref_groups])
 ```
 
 The remaining populations were treated as observations. Neurons, astrocytes and OPCs were not assumed to be malignant; their inferred profiles served as additional biological checks.
@@ -199,7 +201,7 @@ knitr::include_graphics("../data/infercnv_out/infercnv.png")
 
 -   The reference populations (cells on top) display relatively flat profiles as expected: no region is consistently red or blue.
 
--   **Tumour NPC-like and Tumour MES-like cells populations show the classic glioblastoma signature** : a gain of chr7 (red) and a loss of chr10 (blue), present in most of the cells.
+-   **The tumour populations (NPC-like, cycling and hypoxic MES-like cells) show the classic glioblastoma signature** : a gain of chr7 (red) and a loss of chr10 (blue). The MES-like cluster shows it in only part of its cells, which the per-cell scores below quantify.
 
 -   Other alterations are shared by the tumour cells : a short and strong gain on **chr12** and a loss of **chr13**. A loss on **chr11** is only seen in a part of the NPC-like cells, which could be a subclone.
 
@@ -294,7 +296,10 @@ is_reference <- sobjFiltrd$celltype %in% ref_groups
 
 # Calculate the 99th percentile of the reference chr7–chr10 distribution
 cnv_threshold <- unname(quantile(sobjFiltrd$chr7_minus_chr10[is_reference],
-                                 probabilities = 0.99,na.rm = TRUE))
+                                 probs = 0.99,na.rm = TRUE))
+
+stopifnot(length(cnv_threshold) == 1)
+stopifnot(mean(sobjFiltrd$chr7_minus_chr10[is_reference] > cnv_threshold, na.rm = TRUE) < 0.05)
 
 cat("Chr7–chr10 malignancy threshold:",round(cnv_threshold, 4),"\n")
 
@@ -342,29 +347,54 @@ knitr::kable(cnv_summary,col.names = c(
   caption = "CNV-based classification by annotated cell population")
 ```
 
+```{r}
+# Quantities used in the interpretation
+pct_of <- function(type) cnv_summary$pct_malignant[cnv_summary$celltype == type]
+n_of <- function(type) cnv_summary$n[cnv_summary$celltype == type]
+
+n_malignant_total <- sum(sobjFiltrd$cnv_status == "Malignant")
+pct_malignant_total <- round(100 * n_malignant_total / ncol(sobjFiltrd), 1)
+ref_pct_range <- range(cnv_summary$pct_malignant[cnv_summary$analysis_group == "Reference"])
+normal_neural <- c("Excitatory neurons", "Inhibitory neurons", "Astrocytes")
+neural_pct_range <- range(sapply(normal_neural, pct_of))
+```
+
 **Interpretation**
 
-In the current dataset:
+The threshold on the chr7 - chr10 contrast (`r round(cnv_threshold, 4)`) classified `r format(n_malignant_total, big.mark = ",")` cells (`r pct_malignant_total`%) as malignant.
 
--   **97.4% of the NPC-like tumour cluster was classified as malignant and**
+-   **The tumour clusters carry the CNV signature.** `r pct_of("Tumour NPC-like")`% of the NPC-like cluster, `r pct_of("Cycling cells")`% of the cycling cells and `r pct_of("Tumour MES-like (hypoxic)")`% of the hypoxic MES-like cluster were classified as malignant, which supports their tumour identity.
 
--   **71.1% of the MES-like tumour cluster was classified as malignant** :
+-   **The MES-like cluster is mixed.** Only `r pct_of("Tumour MES-like")`% of its `r n_of("Tumour MES-like")` cells were classified as malignant. The non-malignant cells can be reactive astrocyte-like cells, which share the glial markers of this cluster, or tumour cells with a weaker signal close to the threshold. For the next steps, `cnv_status` is used rather than the cluster label to select the tumour cells.
 
-The GBmap annotation is confirmed, these clusters are tumour cells.
+-   **`r pct_of("Unclear")`% of the `Unclear` cluster was classified as malignant**, which indicates that it mostly contains tumour cells with a low RNA content.
 
--   **About 24% of the MES-like cluster is called normal** : these can be reactive astrocytes (they look like MES-like cells but have no CNV) or tumour cells with a weaker signal close to the threshold. For the next steps we use `cnv_status` rather than the cluster label to select tumour cells.
+-   **`r pct_of("OPC")`% of the OPCs crossed the threshold**, more than the false-positive rate of the reference. A part of these cells may therefore be OPC-like tumour cells, but most OPCs remain normal. This group is too small to be interpreted quantitatively.
 
--   **66.9% of the `Unclear` cluster was classified as malignant :** this cluster is mostly made of tumour cells of lower quality (low UMI counts), not debris. Keeping it was the right choice.
+-   **Neurons and astrocytes (`r neural_pct_range[1]` to `r neural_pct_range[2]`%)** were classified as normal, as expected.
 
--   **15.7% of OPCs crossed the threshold** : mostly normal OPC, not OPC-like tumour cells.
+-   **Reference cells (`r ref_pct_range[1]` to `r ref_pct_range[2]`%)**: this is the expected false-positive rate of a threshold set at the 99th percentile of the reference. T/NK cells are slightly higher because they are few (`r n_of("T/NK cells")` cells).
 
--   **Neurons and astrocytes (0 to 2%)** : normal, the sanity check works.
+## Sensitivity to the threshold
 
--   **Reference cells (1 to 6%)** : this is the expected false positive rate with a threshold at the 99th percentile of the reference. T/NK cells are a bit higher (6%) but there are only 49 cells.
+The number of malignant cells was recomputed for thresholds set at the 95th, 99th and 99.9th percentile of the reference distribution.
+
+```{r}
+# Count the malignant cells of each cell type at alternative thresholds
+threshold_sensitivity <- sapply(c("95%" = 0.95, "99%" = 0.99, "99.9%" = 0.999), function(q) {
+  thr <- unname(quantile(sobjFiltrd$chr7_minus_chr10[is_reference], probs = q, na.rm = TRUE))
+  as.integer(table(sobjFiltrd$celltype[sobjFiltrd$chr7_minus_chr10 > thr]))
+})
+rownames(threshold_sensitivity) <- levels(sobjFiltrd$celltype)
+
+rbind(threshold_sensitivity, Total = colSums(threshold_sensitivity))
+```
+
+The total number of malignant cells was `r paste(format(colSums(threshold_sensitivity), big.mark = ","), collapse = ", ")` at the 95th, 99th and 99.9th percentiles, respectively. The applied threshold corresponds to the 99th percentile.
 
 ## **Investigation of the chromosome 12 signal**
 
-A chromosome 12 signal was visible in the infereed tumor profil. Because the CDK4 / MDM2 region (12q14-15 –\> chromosome 12), are recurrently amplified in glioblastoma. We check the expression of these genes.
+A short and strong gain of chromosome 12 was visible in the inferred tumour profile. The 12q13-15 region, which contains CDK4 and MDM2, is recurrently amplified in glioblastoma. The expression of these two genes was therefore examined.
 
 ```{r}
 #| fig-width: 12
@@ -382,15 +412,27 @@ chr12_expression_summary <- FetchData(sobjFiltrd,vars = c("MDM2","CDK4","celltyp
 knitr::kable(chr12_expression_summary,caption = "Expression of candidate chromosome 12 genes")
 ```
 
-`MDM2` is clearly higher in the tumour cells (mean log-normalised expression of 3 to 4.3 in tumour clusters vs below 1 in normal cells), CDK4 is not. The chr12 gain is therefore most likely an **MDM2 amplification**. MDM2 inhibits p53, so this is one way for the tumour to inactivate the p53 pathway. This is a hypothesis based on expression only, it would need to be confirmed on DNA.
+```{r}
+# Compare the candidate chr12 genes between tumour and normal populations
+tumour_types <- c("Tumour MES-like", "Tumour MES-like (hypoxic)", "Tumour NPC-like",
+                  "Cycling cells", "Unclear")
+is_tumour_type <- chr12_expression_summary$celltype %in% tumour_types
+
+mdm2_tumour <- range(chr12_expression_summary$mean_MDM2[is_tumour_type])
+mdm2_normal_max <- max(chr12_expression_summary$mean_MDM2[!is_tumour_type])
+cdk4_tumour <- range(chr12_expression_summary$mean_CDK4[is_tumour_type])
+cdk4_normal_max <- max(chr12_expression_summary$mean_CDK4[!is_tumour_type])
+```
+
+`MDM2` is higher in the tumour populations (mean log-normalised expression from `r mdm2_tumour[1]` to `r mdm2_tumour[2]`) than in the normal populations (up to `r mdm2_normal_max`), whereas `CDK4` is not (`r cdk4_tumour[1]` to `r cdk4_tumour[2]` in the tumour populations, up to `r cdk4_normal_max` in the normal ones). The chr12 gain is therefore most likely an **MDM2 amplification**. MDM2 inhibits p53, so this is one way for the tumour to inactivate the p53 pathway. This is a hypothesis based on expression only; it would need to be confirmed on DNA.
 
 ## Limitations
 
--   The classification depends on the threshold (99th percentile of the reference), which is a choice.
+-   The classification depends on the threshold (99th percentile of the reference), which is a choice; its effect is quantified in the sensitivity analysis above.
 
 -   inferCNV infers chromosomal alterations from RNA expression and does not directly measure DNA. inferCNV also detects large alterations (whole chromosome or arm), not mutations or small events.
 
--   The reference only contains cell types present in our sample, neurons are not in it which creates artefacts in the neuron cells.
+-   The reference only contains cell types present in our sample. Neurons are not in it, which creates artefacts in their inferred profiles outside chr7 and chr10, so their profiles were used only as a check of these two chromosomes.
 
 ## Saving the CNV-annotated object
 
