@@ -1,0 +1,464 @@
+---
+title: "Glioblastoma_scRNAseq_TME"
+format: html
+editor: visual
+---
+
+```{r}
+the.seed <- 42
+set.seed(the.seed)
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(ggplot2)
+  library(gprofiler2)
+})
+```
+
+```{r}
+sample.name <- "brain_DV200"
+```
+
+## Biological rationale
+
+The glioblastoma tumour microenvironment is composed predominantly of myeloid cells, particularly **tumour-associated macrophages (TAMs)**. These cells can originate either from resident brain **microglia** or from **bone-marrow-derived macrophages** **(BDM)** recruited from the circulation.
+
+The distinction between these origins is biologically relevant because recruited macrophages are frequently associated with immunosuppressive programmes and tumour progression. We also look at the few T cells : glioblastoma is a "cold" tumour with few, often exhausted, T cells.
+
+The state-annotated Seurat object is loaded. Myeloid cells classified as non-malignant by the CNV analysis are selected for the study of the immune microenvironment. The CNV status is used as an additional safeguard against including tumour cells with mesenchymal or macrophage-like transcriptional programmes.
+
+```{r}
+# Define the path of the state-annotated Seurat object and load the object
+load(paste0('../data/processed_data/', sample.name, '_STATES.rda'))
+
+# Retain annotated myeloid cells without a malignant CNV profile
+myeloid <- subset(sobjFiltrd, subset = celltype == "Myeloid" & cnv_status == "Normal")
+
+ncol(myeloid)
+```
+
+## Predicted origin of the TAMs : microglia or BDM ?
+
+Glioblastoma-associated macrophages can originate from resident brain microglia or from circulating monocytes that differentiate into bone-marrow-derived macrophages (BDM) after entering the tumour.
+
+These origins are associated with partially distinct transcriptional programmes. Resident microglia typically express genes such as `P2RY12`, `TMEM119`, `CX3CR1`, `SALL1` and `P2RY13`, whereas recruited monocytes and BDM more frequently express `CD163`, `MRC1`, `TGFBI`, `CCR2`, `ITGA4`, `LYZ` and `FCN1`.
+
+However, these programmes are not mutually exclusive. Microglial markers can be downregulated after activation, while recruited macrophages can acquire microglia-like features within the brain microenvironment. The scores calculated here should therefore be interpreted as transcriptional similarities rather than definitive lineage assignments.
+
+```{r}
+# Define representative markers of resident microglial(mg) identity
+mg_genes <- c("P2RY12", "TMEM119", "CX3CR1", "SALL1", "P2RY13")
+
+# Define representative markers of monocytes and bone-marrow-derived macrophages (bdm)
+bdm_genes <- c("CD163", "MRC1", "TGFBI", "CCR2", "ITGA4", "LYZ", "FCN1")
+
+c(mg_genes, bdm_genes)[!c(mg_genes, bdm_genes) %in% rownames(myeloid)]  # genes missing from the probe panel
+
+# Calculate microglia- and BDM-associated module scores
+# AddModuleScore compares the average expression of each signature with matched control genes of similar overall expression
+myeloid <- AddModuleScore(myeloid, features = list(intersect(mg_genes, rownames(myeloid)),
+                                                   intersect(bdm_genes, rownames(myeloid))),
+                          name = "origin_", seed = the.seed)
+
+# Rename the two generated scores with explicit biological labels
+myeloid$score_microglia <- myeloid$origin_1
+myeloid$score_BDM <- myeloid$origin_2
+
+#Assign the closest transcriptional origin according to the higher of the two module scores
+myeloid$origin <- ifelse(myeloid$score_microglia > myeloid$score_BDM, "Microglia-like", "BDM-like")
+
+# Display the number and percentage of cells in each category
+table(myeloid$origin)
+```
+
+The two scores were compared directly for each cell. Cells above the diagonal have a relatively stronger microglial programme, whereas cells below the diagonal have a relatively stronger BDM programme. Distance from the diagonal reflects the difference between the two scores.
+
+```{r}
+# Compare microglia- and BDM-associated scores at single-cell resolution
+ggplot(myeloid@meta.data,aes(x = score_BDM,y = score_microglia,
+                             colour = origin)) +geom_point(size = 0.7,
+    alpha = 0.8) +geom_abline(slope = 1,intercept = 0,linetype = "dashed",
+    colour = "grey40") + coord_equal() + theme_classic() +
+  labs(title = "Predicted transcriptional origin of TAMs",
+    x = "BDM-associated module score", 
+    y = "Microglia-associated module score",colour = "Predicted origin")
+```
+
+**Interpretation**
+
+Approximately 61.9% of the myeloid cells were classified as BDM-like and 38.1% as microglia-like. The predominance of the BDM-associated programme is consistent with substantial recruitment of circulating monocyte-derived macrophages into the tumour.
+
+The cells nevertheless formed a continuum rather than two completely separated populations. Several cells had similar microglia and BDM scores and were located close to the diagonal. Their binary assignment was determined by a small score difference and should therefore be interpreted cautiously. In addition, the module-score classification reflects the current transcriptional programme of each cell and does not directly establish its developmental origin.
+
+## Identification of Sub-populations of TAMs
+
+The clustering performed on the complete dataset was designed to separate major cell populations and may not capture the finer heterogeneity within the myeloid compartment. The selected myeloid cells were therefore processed and clustered independently.
+
+Highly variable genes were selected within the myeloid subset, after which the data were scaled and subjected to principal component analysis. A shared nearest-neighbour graph was constructed using the first 15 principal components, and graph-based clustering was performed at a resolution of 0.3.
+
+The resulting clusters are initially data-driven groups and do not have an intrinsic biological meaning. Their identities must therefore be determined using marker expression, predicted origin, quality metrics and functional enrichment.
+
+```{r}
+# Identify genes that capture variation within the myeloid compartment
+myeloid <- FindVariableFeatures(myeloid, nfeatures = 2000, verbose = FALSE)
+
+# Centre and scale gene expression before PCA
+myeloid <- ScaleData(myeloid, verbose = FALSE)
+
+# Calculate 20 principal components from the myeloid-specific variable genes
+myeloid <- RunPCA(myeloid, npcs = 20, verbose = FALSE)
+
+# Construct the nearest-neighbour and shared nearest-neighbour graphs from the first 15 principal components
+myeloid <- FindNeighbors(myeloid, dims = 1:15, verbose = FALSE)
+
+# Identify myeloid subclusters at a moderate clustering resolution
+myeloid <- FindClusters(myeloid, resolution = 0.3, verbose = FALSE)
+
+# Generate a two-dimensional representation of the myeloid cells using the same principal components as the neighbour graph
+myeloid <- RunUMAP(myeloid, dims = 1:15, verbose = FALSE)
+
+# Display the number of cells assigned to each data-driven subcluster
+table(myeloid$seurat_clusters)
+```
+
+```{r}
+# Visualise the data-driven myeloid subclusters
+p_clusters <- DimPlot(myeloid,reduction = "umap",
+                      group.by = "seurat_clusters", label = TRUE,
+  repel = TRUE) + labs(title = "Myeloid subclusters",
+    colour = "Subcluster")
+
+# Visualise the predicted microglia- or BDM-associated origin
+# on the same myeloid UMAP
+p_origin <- DimPlot(myeloid,reduction = "umap", group.by = "origin") +
+  labs(title = "Predicted TAM origin", colour = "Predicted origin")
+
+p_clusters + p_origin
+```
+
+The myeloid compartment was divided into five subclusters :
+
+- cluster 0: 220 cells;
+- cluster 1: 145 cells;
+- cluster 2: 108 cells;
+- cluster 3: 84 cells;
+- cluster 4: 80 cells.
+
+The predicted origin was not distributed randomly across the UMAP. Cluster 2 was predominantly microglia-like, whereas clusters 3 and 4 were almost entirely BDM-like. Cluster 0 had a mixed predicted origin with a moderate microglial bias. Cluster 1 was predominantly BDM-like but was subsequently found to have low transcriptomic complexity and a strong contribution from ambient neural or tumour-associated RNA.
+
+These patterns indicate that the reclustering captures both cellular origin and functional state. Origin alone is therefore insufficient to define the biological identity of each subcluster.
+
+## Marker-based characterisation of the myeloid subclusters
+
+Representative genes were examined to distinguish cellular origin from functional state. The selected marker groups cover:
+
+- resident microglial identity;
+- monocyte or BDM identity;
+- inflammatory activation;
+- immunoregulatory programmes;
+- antigen presentation;
+- lipid-associated macrophage programmes;
+- hypoxia;
+- proliferation.
+
+Genes absent from the panel were removed before visualisation. The marker profiles were interpreted together with the origin scores and quality-control measurements rather than using a single gene to define each cluster.
+
+```{r}
+#| fig-width: 14
+#| fig-height: 4.5
+
+# Organise representative TAM genes by lineage or biological programme
+tam_markers <- list(
+  "Microglia"     = c("P2RY12", "TMEM119", "CX3CR1"),
+  "BDM / mono"    = c("CD163", "TGFBI", "LYZ", "FCN1"),
+  "Pro-infl."     = c("IL1B", "TNF", "CCL3", "CCL4", "NFKBIA"),
+  "Immunosupp."   = c("MRC1", "IL10", "TGFB1", "SPP1"),
+  "Antigen pres." = c("HLA-DRA", "CD74"),
+  "Lipid"         = c("APOE", "APOC1", "TREM2"),
+  "Hypoxia"       = c("VEGFA", "ADM", "BNIP3"),
+  "Cycling"       = c("MKI67", "TOP2A"))
+# Remove genes that are not measured by the panel
+tam_markers <- lapply(tam_markers, intersect, rownames(myeloid))
+
+# Display average expression and detection frequency by subcluster
+DotPlot(myeloid, features = tam_markers) + RotatedAxis() +
+  theme(strip.text.x = element_text(angle = 90, hjust = 0, size = 9))
+```
+
+The marker profiles revealed several candidate biological programmes, including microglial identity, activation, hypoxia and an MRC1-associated BDM phenotype.
+
+Cluster 1 differed from the other subclusters because it showed lower transcriptomic complexity and strong expression of neural- and glial-associated genes. Its quality was therefore examined before assigning the final TAM annotations.
+
+**Quality assessment of the myeloid sub-clusters**
+
+```{r}
+# Extract the count matrix once for detection-based measurements
+myeloid_counts <- GetAssayData(myeloid, layer = "counts")
+
+# Summarise transcriptomic complexity, predicted origin, tumour-associated RNA and CNV signal for each subcluster
+tam_qc <- myeloid@meta.data %>%
+  mutate(GFAP = myeloid_counts["GFAP", ] > 0,
+         SOX2 = myeloid_counts["SOX2", ] > 0) %>%
+  group_by(subcluster = seurat_clusters) %>%
+  summarise(n = n(),
+            median_genes = median(nFeature_RNA),
+            median_UMI = median(nCount_RNA),
+            pct_BDM_like = round(100 * mean(origin == "BDM-like")),
+            pct_GFAP = round(100 * mean(GFAP)),
+            pct_SOX2 = round(100 * mean(SOX2)),
+            median_chr7_minus_chr10 = round(median(chr7_minus_chr10), 3))
+# Display the quality-control summary
+knitr::kable(tam_qc, caption = "Quality assessment of the myeloid subclusters")
+```
+
+GFAP is detected in most myeloid cells of every sub-cluster : GFAP is one of the most abundant transcripts of the tumour, so this is likely **ambient RNA** (free RNA from lysed tumour cells captured with the macrophages), common in FFPE / dissociated tissue. Sub-cluster 1 is more affected : half the genes and UMI of the others, GFAP in almost all cells and SOX2 in 14%, but no CNV signal (and scDblFinder doublets were already removed in the QC). It is probably made of low quality macrophages with a high fraction of ambient tumour RNA (or phagocytosed tumour material), not a true TAM type.
+
+**Annotation of the TAM sub-clusters**
+
+The myeloid subclusters were annotated by combining their microglia-versus-BDM scores with lineage, activation, hypoxia, immunoregulatory and antigen-presentation markers.
+
+The annotations summarise the dominant transcriptional programme of each cluster and should not be interpreted as experimentally confirmed cellular functions.
+
+```{r}
+# Assign a biological identity to each myeloid sub-cluster
+# based on its enriched marker genes.
+tam_labels <- c(
+  "0" = "Activated TAM",
+  "1" = "Low quality / ambient RNA",
+  "2" = "Microglia-like TAM",
+  "3" = "Hypoxic TAM",
+  "4" = "MRC1+ BDM"
+)
+
+# Transfer the biological labels to the myeloid metadata
+myeloid$tam_type <- unname(
+  tam_labels[as.character(myeloid$seurat_clusters)]
+)
+
+# Check that every myeloid cell received an annotation
+table(myeloid$seurat_clusters, myeloid$tam_type, useNA = "ifany")
+
+# Display the annotated TAM subpopulation on the myeloid UMAP
+DimPlot(myeloid, group.by = "tam_type", label = TRUE, repel = TRUE) + labs(title = "TAM subpopulations")
+```
+
+**Interpretation**
+
+- **Cluster 0 - Activated TAM** : This was the largest population containing 220 cells. It expressed activation associated genes such as `EGR1`, `EGR2`, `EGR3`, `FOSB`, `NR4A3`, and `CCL4`. Its predicted origin was mixed, with 56.4% microglia-like and 43.6% BDM-like cells. Moderate expression of `P2RY12`, `TMEM119`, `CX3CR1` and `TREM2` indicates that the activated programme partly overlaps a microglial identity.
+
+- **Cluster 1 - Low quality / ambient RNA** : this cluster had the lowest median number of detected genes and UMIs. Its expression profile was strongly affected by neural and glial associated transcripts and was not interpreted as a distinct biological TAM state.
+
+- **Cluster 2 - Microglia-like TAM** : this cluster showed the strongest expression of `P2RY12`, `TMEM119`, `CX3CR1` and `SALL1`. Most cells were also classified as microglia-like by the origin scores.
+
+- **Cluster 3 - Hypoxic TAM** : this predominantly BDM-like population expressed a strong hypoxia-associated programme, including `ADM`, `VEGFA`, `SLC2A1`, `EGLN3`, `NDRG1`, `ANGPTL4` and `CXCL8`. These macrophages share the hypoxia program of the MES-like tumour cells, they probably live in the same hypoxic areas.
+
+- **Cluster 4 - MRC1+ BDM** : all cells were classified as BDM-like, with expression of `MRC1`, `CD163`, `TGFBI`, `LYZ`, `CLEC10A`, `SIGLEC1`, `CD209` and `LYVE1` , supporting an immunoregulatory bone-marrow-derived macrophage phenotype.
+
+Together, these results reveal the coexistence of activated, microglia-like, hypoxic and MRC1-positive BDM programmes. The predominance of BDM-like cells and the presence of hypoxic and MRC1-positive populations are compatible with an immunoregulatory TAM compartment. However, transcriptional marker expression does not directly demonstrate macrophage function.
+
+## GO enrichment of the TAM sub-populations
+
+To complete the marker-based annotation, genes overexpressed in each myeloid subcluster were identified relative to all other myeloid cells. GO Biological Process enrichment was then used to summarise the biological functions represented by these marker genes.
+
+As in the Tumour-state analysis, the enrichment background was restricted to genes detected in the myeloid dataset. This is important because the Flex assay measures a targeted gene panel rather than the complete transcriptome.
+
+The enrichment analysis is descriptive. It helps characterise the subclusters but does not provide independent validation of their annotations.
+
+```{r}
+# Use the data-driven myeloid subclusters as active identities
+Idents(myeloid) <- "seurat_clusters"
+
+# Identify genes positively associated with each myeloid subcluster
+tam_deg <- FindAllMarkers(myeloid, only.pos = TRUE, min.pct = 0.25,
+                          logfc.threshold = 0.5, verbose = FALSE) %>%
+  filter(p_val_adj < 0.05)
+
+# Report the number of significant marker genes per subcluster
+table(tam_deg$cluster)
+
+# Display the ten markers with the largest fold change in each subcluster
+tam_deg %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 10) %>%
+  summarise(top_genes = paste(gene, collapse = ", "),.groups = "drop")
+```
+
+The gene universe was defined as genes detected in at least ten myeloid cells. Using the whole human genome as the background would bias the enrichment because genes absent from the Flex panel could never be selected as markers.
+
+```{r}
+# Define the enrichment background as genes detected in at least ten myeloid cells
+detected_myeloid <- rownames(myeloid)[Matrix::rowSums(GetAssayData(myeloid, layer = "counts") > 0) >= 10]
+
+# Create one marker-gene query for each myeloid subcluster 
+tam_gene_lists <- split(tam_deg$gene, tam_deg$cluster)
+
+# Test GO Biological Process terms using the data-set specific gene universe
+go_tam <- gost(query = tam_gene_lists, organism = "hsapiens", 
+               sources = "GO:BP",
+               custom_bg = detected_myeloid, domain_scope = "custom",
+               correction_method = "g_SCS", multi_query = FALSE)
+
+# Verify that gProfiler returned an enrichment table
+stopifnot(!is.null(go_tam$result))
+
+# Extract the enrichment table
+go_tam_res <- go_tam$result
+
+# Associate each numerical GO query with its TAM annotation
+go_tam_res <- go_tam_res %>%
+  mutate(
+    cluster = as.character(query),
+    tam_annotation = paste0(
+      "Cluster ",
+      cluster,
+      " — ",
+      unname(tam_labels[cluster])
+    )
+  )
+
+# Confirm that every GO query received a biological annotation
+stopifnot(!anyNA(go_tam_res$tam_annotation))
+
+# Display the ten most significant terms for each annotated subcluster
+go_tam_summary <- go_tam_res %>% group_by(tam_annotation) %>%
+  slice_min(p_value, n = 10, with_ties = FALSE) %>% ungroup() %>%
+  select(tam_annotation, term_name, p_value, intersection_size,
+    term_size)
+
+knitr::kable(go_tam_summary,col.names = c(
+    "TAM subpopulation",
+    "GO Biological Process",
+    "Adjusted p-value",
+    "Marker genes",
+    "Term size"),
+  caption = "GO enrichment of TAM subpopulation markers")
+```
+
+Very broad GO terms were excluded from the visualisation to emphasise more specific and interpretable biological processes. Point size represents the number of marker genes contributing to each term.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 9
+
+# Retain up to eight specific GO terms per myeloid subcluster
+top_go_tam <- go_tam_res %>% filter(term_size <= 500) %>%
+  group_by(tam_annotation) %>% slice_min(p_value, n = 8, with_ties = FALSE
+  ) %>% ungroup()
+
+# Visualise the selected biological processes
+ggplot(top_go_tam, aes(x = -log10(p_value), y = reorder(term_name, -log10(p_value)), size = intersection_size)) +
+  geom_point(colour = "darkorange") +
+  facet_wrap(~ tam_annotation, ncol = 1, scales = "free_y") +
+  theme_bw() + labs(x = "-log10(adjusted p-value)", y = NULL, size = "Genes")
+```
+
+**Interpretation**
+
+- **Cluster 0 - Activated TAM:** enriched processes were associated with immune activation, cytokine production and leukocyte responses. Together with the expression of `CCL4`, `EGR1`, `EGR2`, `EGR3`, `FOSB` and `NR4A3`, these results support an activated macrophage programme.
+
+- **Cluster 1 - Low quality / ambient RNA:** enriched terms were dominated by neural or nervous-system-associated processes and oxidative metabolism rather than macrophage-specific functions. Together with its low transcriptomic complexity and strong expression of `GFAP`, `MBP` and other neural or glial genes, this supports the interpretation of a low-quality population affected by ambient RNA or phagocytosed material.
+
+- **Cluster 2 - Microglia-like TAM:** the enrichment profile was consistent with innate immune and myeloid-cell functions. Its microglial identity was supported more specifically by the strong expression of `P2RY12`, `TMEM119`, `CX3CR1` and `SALL1`, together with the microglia-associated module score.
+
+- **Cluster 3 - Hypoxic TAM:** response to hypoxia, cellular stress and regulation of cell death were among the enriched processes. These results were consistent with the strong expression of `ADM`, `VEGFA`, `SLC2A1`, `EGLN3`, `NDRG1` and `ANGPTL4`.
+
+- **Cluster 4 - MRC1+ BDM:** enriched processes were associated with immune regulation, leukocyte activation and macrophage function. Together with the expression of `MRC1`, `CD163`, `CLEC10A`, `SIGLEC1`, `CD209` and `LYVE1`, this supports an immunoregulatory bone-marrow-derived macrophage phenotype.
+
+Overall, the GO enrichment was consistent with the marker-based annotation of activated, microglia-like, hypoxic and MRC1-positive BDM programmes. The results for cluster 1 did not support a distinct macrophage function and instead reinforced its classification as a low-quality population affected by non-myeloid RNA.
+
+## Exploratory analysis of T/NK cells
+
+The non-malignant T/NK-cell compartment contained only 45 cells. This population was therefore too small for reliable reclustering or differential-expression analysis.
+
+Instead, representative genes were examined to describe CD4 and CD8 associated expression, cytotoxic activity, naive or memory-like programmes, proliferation and the expression of exhaustion-associated markers (PDCD1 = PD-1, HAVCR2 = TIM-3, LAG3, TOX, CTLA4).
+
+Because of the small number of cells and the effect of transcript dropout, these results are descriptive. Detection of individual markers should not be interpreted as a definitive cell-type or functional classification.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 3
+
+# Retain non malignant cells from the annotated T/NK population
+tcells <- subset(sobjFiltrd, subset = celltype == "T/NK cells" & cnv_status == "Normal")
+
+# Report the number of cells available for exploratory analysis
+ncol(tcells)
+
+# Organise representative genes by biological programme
+t_markers <- list(
+  "Type associated" = c("CD8A", "CD4", "FOXP3", "NKG7"),
+  "Cytotoxicity" = c("GZMA", "GZMB", "PRF1", "IFNG"),
+  "Naive/memory" = c("IL7R", "CCR7", "TCF7"),
+  "Exhaustion"   = c("PDCD1", "HAVCR2", "LAG3", "TOX", "CTLA4"),
+  "Cycling"      = c("MKI67"))
+
+# Identify markers that are absent from the Flex panel
+missing_t_markers <- setdiff(unlist(t_markers, use.names = FALSE),
+  rownames(tcells))
+missing_t_markers
+
+# Retain only markers measured in this dataset
+t_markers <- lapply(t_markers, intersect, rownames(tcells))
+
+# Remove marker groups with no available gene
+t_markers <- t_markers[lengths(t_markers) > 0]
+
+# Display average expression and detection frequency for the selected T/NK-cell markers
+DotPlot(tcells, features = t_markers, group.by = "orig.ident",
+  scale = FALSE) +
+  RotatedAxis() + theme(strip.text.x = element_text(angle = 90,
+      hjust = 0, size = 9)) +
+  labs(title = "Expression of selected T/NK-cell markers",x = NULL,
+    y = NULL)
+```
+
+Because the compartment was too small for subclustering, the percentage of cells with at least one detected count was calculated for each available marker. These percentages describe marker detection rather than exact cell-type proportions.
+
+```{r}
+# Extract the raw RNA counts for the T/NK-cell subset
+tcell_counts <- GetAssayData(tcells,layer = "counts")
+
+# Combine the available markers into a single ordered vector
+available_t_markers <- unique(unlist(t_markers,use.names = FALSE))
+
+# Calculate the percentage of cells with at least
+# one detected count for each marker
+t_marker_detection <- data.frame(marker = available_t_markers,
+  pct_detected = round(100 * Matrix::rowMeans(tcell_counts[
+        available_t_markers,,drop = FALSE] > 0),1))
+
+# Display the marker-detection summary
+knitr::kable(t_marker_detection, col.names = c("Marker",
+    "% of T/NK cells with detected expression"),
+  caption = "Detection of selected markers in the T/NK-cell compartment")
+```
+
+**Interpretation**
+
+- `CD8A` was detected in 44.4% of the cells and `CD4` in 33.3%. `FOXP3` was detected in four cells (8.9%). These values suggest the presence of both CD8- and CD4-associated T-cell profiles, with few cells expressing a regulatory T-cell-associated marker. However, transcript dropout prevents these percentages from being interpreted as exact CD8, CD4 or regulatory T-cell proportions.
+
+- The cytotoxicity-associated genes `GZMA`, `NKG7` and `PRF1` were detected in 55.6%, 51.1% and 33.3% of the cells, respectively. `GZMB` was less frequently detected, while `IFNG` was detected in only 2.2% of the cells. This indicates cytotoxic potential but limited evidence of strong interferon-gamma-producing activity.
+
+- The naive or memory-associated markers `IL7R` and `TCF7` were detected in 55.6% and 35.6% of the cells, respectively, whereas `CCR7` was detected in 11.1%. This suggests that part of the compartment retains a naive- or memory-like transcriptional programme.
+
+- Exhaustion-associated genes were detected in subsets of the cells: `PDCD1` in 26.7%, `HAVCR2`, `LAG3` and `CTLA4` in 17.8%, and `TOX` in 13.3%. Their expression is compatible with an exhaustion-associated programme, but these markers alone are not sufficient to establish functional T-cell exhaustion.
+
+- `MKI67` was not detected, providing no evidence of active proliferation in the T/NK-cell compartment.
+
+Overall, the low abundance of T/NK cells, weak `IFNG` expression, absence of detectable proliferation and partial expression of exhaustion-associated genes are compatible with a poorly active immune microenvironment. Nevertheless, the presence of cytotoxicity- and memory-associated markers indicates that the compartment is not transcriptionally inactive.
+
+Given the small number of cells, these findings should be considered exploratory and cannot establish the functional state of the T/NK-cell compartment.
+
+## **Limitations**
+
+- Ambient tumour RNA is present in the immune cells (e.g. GFAP), it can blur the profiles.
+
+- The origin (microglia vs BDM) is based on a few markers and forms a continuum.
+
+- A single tumour, and cells of one sample are not independent replicates for the GO p-values.
+
+```{r}
+save(myeloid, tcells, file = paste0('../data/processed_data/', sample.name, '_TME.rda'))
+```
+
+```{r}
+sessionInfo()
+```
